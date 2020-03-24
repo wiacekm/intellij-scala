@@ -128,7 +128,7 @@ class BspFetchTestEnvironmentTaskProvider extends BeforeRunTaskProvider[BspFetch
 
   private def askUserForTargetId(targetIds: Seq[String], task: BspFetchTestEnvironmentTask): Option[String] = {
     var chosenTarget: Option[String] = None
-    ApplicationManager.getApplication.invokeAndWait { () => {
+    invokeAndWait { () => {
       chosenTarget = Option(Messages.showEditableChooseDialog(
         BspBundle.message("bsp.task.choose.target.message"),
         BspBundle.message("bsp.task.choose.target.title"),
