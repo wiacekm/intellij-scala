@@ -35,6 +35,7 @@ import org.jetbrains.plugins.scala.testingSupport.test.testdata.{AllInPackageTes
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
+import org.jetbrains.plugins.scala.extensions._
 
 case class JvmTestEnvironment(
                                classpath: Seq[String],
@@ -187,7 +188,7 @@ class BspFetchTestEnvironmentTaskProvider extends BeforeRunTaskProvider[BspFetch
     val psiFacade = JavaPsiFacade.getInstance(project)
     val scope = GlobalSearchScope.allScope(project)
     var matchedClasses: Array[PsiClass] = Array()
-    ApplicationManager.getApplication.invokeAndWait{
+    invokeAndWait {
       () => ApplicationManager.getApplication.runReadAction{
         new Runnable {
           override def run(): Unit = {
@@ -210,13 +211,12 @@ class BspFetchTestEnvironmentTaskProvider extends BeforeRunTaskProvider[BspFetch
               case data: ClassTestData => List(data.testClassPath)
               case _ => List()
             }
-          case junitConfig: JUnitConfiguration => {
+          case junitConfig: JUnitConfiguration =>
             junitConfig.getTestType match {
               case JUnitConfiguration.TEST_METHOD | JUnitConfiguration.TEST_CLASS =>
                 List(junitConfig.getPersistentData.getMainClassName)
               case _ => List()
             }
-          }
           case _ => List()
         }
         classes
@@ -240,15 +240,15 @@ class BspFetchTestEnvironmentTaskProvider extends BeforeRunTaskProvider[BspFetch
     )
 
     BspJob.waitForJob(job, retries = 10).flatMap {
-          case Left(value) => Failure(value)
-          case Right(value) =>
-            val environment = value.getItems.asScala.head
-            Success(JvmTestEnvironment(
-              classpath = environment.getClasspath.asScala.map(x => new URI(x).getPath),
-              workdir = environment.getWorkingDirectory,
-              environmentVariables = environment.getEnvironmentVariables.asScala.toMap,
-              jvmOptions = environment.getJvmOptions.asScala.toList
-            ))
+      case Left(value) => Failure(value)
+      case Right(value) =>
+        val environment = value.getItems.asScala.head
+        Success(JvmTestEnvironment(
+          classpath = environment.getClasspath.asScala.map(x => new URI(x).getPath),
+          workdir = environment.getWorkingDirectory,
+          environmentVariables = environment.getEnvironmentVariables.asScala.toMap,
+          jvmOptions = environment.getJvmOptions.asScala.toList
+        ))
     }
   }
 

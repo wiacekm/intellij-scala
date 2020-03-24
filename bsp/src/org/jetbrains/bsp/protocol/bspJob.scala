@@ -58,7 +58,7 @@ object BspJob {
         Try(res)
       }
     } catch {
-      case _ : TimeoutException => waitForJob(job, retries)
+      case _ : TimeoutException => waitForJob(job, retries - 1)
     }
 }
 
