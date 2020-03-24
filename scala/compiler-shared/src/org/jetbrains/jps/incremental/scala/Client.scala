@@ -2,7 +2,7 @@ package org.jetbrains.jps.incremental.scala
 
 import java.io.File
 
-import org.jetbrains.annotations.Nls
+import org.jetbrains.annotations.{Nls, NonNls}
 import org.jetbrains.jps.incremental.messages.BuildMessage.Kind
 import org.jetbrains.jps.incremental.scala.Client.ClientMsg
 
@@ -16,25 +16,25 @@ trait Client {
   def message(msg: ClientMsg): Unit
 
   final def message(kind: Kind,
-                    @Nls text: String,
+                    @NonNls text: String,
                     source: Option[File] = None,
                     line: Option[Long] = None,
                     column: Option[Long] = None): Unit =
     message(ClientMsg(kind, text, source, line, column))
 
-  final def error(@Nls text: String,
+  final def error(@NonNls text: String,
                   source: Option[File] = None,
                   line: Option[Long] = None,
                   column: Option[Long] = None): Unit =
     message(Kind.ERROR, text, source, line, column)
 
-  final def warning(@Nls text: String,
+  final def warning(@NonNls text: String,
                     source: Option[File] = None,
                     line: Option[Long] = None,
                     column: Option[Long] = None): Unit =
     message(Kind.WARNING, text, source, line, column)
 
-  final def info(@Nls text: String,
+  final def info(@NonNls text: String,
                  source: Option[File] = None,
                  line: Option[Long] = None,
                  column: Option[Long] = None): Unit =

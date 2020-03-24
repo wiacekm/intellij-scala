@@ -170,18 +170,18 @@ public class BspTestConfigurationForm extends SettingsEditor<BspTestRunConfigura
 
 
     enum TestMode {
-        ALL_IN_PROJECT(BspBundle.message("bsp.test.all.in.project")),
-        CLASS(BspBundle.message("bsp.test.scala.class"));
+        ALL_IN_PROJECT("bsp.test.all.in.project"),
+        CLASS("bsp.test.scala.class");
 
-        String displayText;
+        private final String displayTextKey;
 
-        TestMode(String n) {
-            this.displayText = n;
+        TestMode(String key) {
+            this.displayTextKey = key;
         }
 
         @Override
         public String toString() {
-            return displayText;
+            return BspBundle.message(displayTextKey);
         }
     }
 
