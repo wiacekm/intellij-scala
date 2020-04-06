@@ -1480,7 +1480,7 @@ private object ScalaConformance {
       exs.map(
         ex =>
           ex -> typeParamToType(
-            TypeParameter.light(
+            TypeParameter.deferred(
               ex.name,
               ex.typeParameters,
               () => remapExistentials(ex.lower),
