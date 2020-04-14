@@ -312,10 +312,15 @@ object InferUtil {
       val expressionToUpdate = Expression(ScSubstitutor.bind(typeParams)(UndefinedType(_)).apply(valueType))
 
       val inferredWithExpected =
-        localTypeInference(internal, Seq(expectedParam), Seq(expressionToUpdate), typeParams,
+        localTypeInference(
+          internal,
+          Seq(expectedParam),
+          Seq(expressionToUpdate),
+          typeParams,
           shouldUndefineParameters = false,
-          canThrowSCE = canThrowSCE,
-          filterTypeParams = filterTypeParams)
+          canThrowSCE              = canThrowSCE,
+          filterTypeParams         = filterTypeParams
+        )
 
       val subst =
         if (!filterTypeParams) {
@@ -347,8 +352,12 @@ object InferUtil {
     if (!expr.isInstanceOf[ScExpression]) return nonValueType
 
     // interim fix for SCL-3905.
-    def applyImplicitViewToResult(mt: ScMethodType, expectedType: Option[ScType], fromSAM: Boolean = false,
-                                  fromMethodInvocation: Boolean = false): ScMethodType = {
+    def applyImplicitViewToResult(
+      mt:                   ScMethodType,
+      expectedType:         Option[ScType],
+      fromSAM:              Boolean = false,
+      fromMethodInvocation: Boolean = false
+    ): ScMethodType = {
       implicit val elementScope: ElementScope = mt.elementScope
       val ScMethodType(result, params, _) = mt
 
@@ -409,22 +418,27 @@ object InferUtil {
         if (expectedType.forall(canConform.conforms)) tpt
         else tpt.copy(internalType = applyImplicitViewToResult(mt, expectedType))
       case mt: ScMethodType =>
-        applyImplicitViewToResult(mt, expectedType)
+        val withoutImplicitParams = withoutImplicitClause(mt)
+        withoutImplicitParams match {
+          case mt: ScMethodType => applyImplicitViewToResult(mt, expectedType)
+          case t                => t
+        }
       case t => t
+    }
+  }
+
+
+  private[this] def withoutImplicitClause(internal: ScType): ScType = {
+    internal match {
+      case ScMethodType(retType, _, true) => retType
+      case m @ ScMethodType(retType, params, false) =>
+        ScMethodType(withoutImplicitClause(retType), params, isImplicit = false)(m.elementScope)
+      case other => other
     }
   }
 
   //truncate method type to have a chance to conform to expected
   private[this] def truncateMethodType(tpe: ScType, expr: PsiElement): ScType = {
-    def withoutImplicitClause(internal: ScType): ScType = {
-      internal match {
-        case ScMethodType(retType, _, true) => retType
-        case m @ ScMethodType(retType, params, false) =>
-          ScMethodType(withoutImplicitClause(retType), params, isImplicit = false)(m.elementScope)
-        case other => other
-      }
-    }
-
     @tailrec
     def countParameterLists(invocation: MethodInvocation, acc: Int = 1): Int =
       invocation.getEffectiveInvokedExpr match {

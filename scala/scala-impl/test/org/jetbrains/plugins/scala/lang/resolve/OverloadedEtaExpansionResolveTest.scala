@@ -28,4 +28,13 @@ class OverloadedEtaExpansionResolveTest
        |}
        |""".stripMargin
   )
+
+  def testSCL17396(): Unit = doResolveTest(
+    s"""
+       |implicit val _b: Boolean = false
+       |val as: List[String]     = Nil
+       |def f(s: String)(implicit B: Boolean): Option[Int] = None
+       |as.fla${REFSRC}tMap(f) // error
+       |""".stripMargin
+  )
 }
