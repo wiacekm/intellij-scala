@@ -312,10 +312,15 @@ object InferUtil {
       val expressionToUpdate = Expression(ScSubstitutor.bind(typeParams)(UndefinedType(_)).apply(valueType))
 
       val inferredWithExpected =
-        localTypeInference(internal, Seq(expectedParam), Seq(expressionToUpdate), typeParams,
+        localTypeInference(
+          internal,
+          Seq(expectedParam),
+          Seq(expressionToUpdate),
+          typeParams,
           shouldUndefineParameters = false,
-          canThrowSCE = canThrowSCE,
-          filterTypeParams = filterTypeParams)
+          canThrowSCE              = canThrowSCE,
+          filterTypeParams         = filterTypeParams
+        )
 
       val subst =
         if (!filterTypeParams) {
@@ -347,8 +352,12 @@ object InferUtil {
     if (!expr.isInstanceOf[ScExpression]) return nonValueType
 
     // interim fix for SCL-3905.
-    def applyImplicitViewToResult(mt: ScMethodType, expectedType: Option[ScType], fromSAM: Boolean = false,
-                                  fromMethodInvocation: Boolean = false): ScMethodType = {
+    def applyImplicitViewToResult(
+      mt:                   ScMethodType,
+      expectedType:         Option[ScType],
+      fromSAM:              Boolean = false,
+      fromMethodInvocation: Boolean = false
+    ): ScMethodType = {
       implicit val elementScope: ElementScope = mt.elementScope
       val ScMethodType(result, params, _) = mt
 
@@ -409,22 +418,40 @@ object InferUtil {
         if (expectedType.forall(canConform.conforms)) tpt
         else tpt.copy(internalType = applyImplicitViewToResult(mt, expectedType))
       case mt: ScMethodType =>
-        applyImplicitViewToResult(mt, expectedType)
+        val (withoutImplicits, implicitParams) = withoutImplicitClause(mt)
+        withoutImplicits match {
+          case mt: ScMethodType =>
+            val updatedWithConversion = applyImplicitViewToResult(mt, expectedType)
+
+            if (implicitParams.nonEmpty) appendImplicitParams(updatedWithConversion, implicitParams)
+            else                         updatedWithConversion
+          case t => t
+        }
       case t => t
     }
   }
 
-  //truncate method type to have a chance to conform to expected
-  private[this] def truncateMethodType(tpe: ScType, expr: PsiElement): ScType = {
-    def withoutImplicitClause(internal: ScType): ScType = {
-      internal match {
-        case ScMethodType(retType, _, true) => retType
-        case m @ ScMethodType(retType, params, false) =>
-          ScMethodType(withoutImplicitClause(retType), params, isImplicit = false)(m.elementScope)
-        case other => other
-      }
+  private[this] def appendImplicitParams(mt: ScMethodType, params: Seq[Parameter]): ScMethodType = {
+    implicit val scope: ElementScope = mt.elementScope
+    mt match {
+      case m @ ScMethodType(inner: ScMethodType, _, _) =>
+        m.copy(result = appendImplicitParams(inner, params))
+      case m @ ScMethodType(resTpe, _, _) =>
+        m.copy(result = ScMethodType(resTpe, params, isImplicit = true))
+    }
+  }
+
+  private[this] def withoutImplicitClause(internal: ScType): (ScType, Seq[Parameter]) =
+    internal match {
+      case ScMethodType(retType, params, true) => (retType, params)
+      case m @ ScMethodType(retType, _, false) =>
+        val (newResult, params) = withoutImplicitClause(retType)
+        (m.copy(result = newResult)(m.elementScope), params)
+      case other => (other, Seq.empty)
     }
 
+  //truncate method type to have a chance to conform to expected
+  private[this] def truncateMethodType(tpe: ScType, expr: PsiElement): ScType = {
     @tailrec
     def countParameterLists(invocation: MethodInvocation, acc: Int = 1): Int =
       invocation.getEffectiveInvokedExpr match {
@@ -438,7 +465,7 @@ object InferUtil {
       case _                                   => tp
     }
 
-    val withoutImplicits = withoutImplicitClause(tpe)
+    val withoutImplicits = withoutImplicitClause(tpe)._1
     expr match {
       case _: ScPostfixExpr | _: ScInfixExpr => withoutImplicits
       case inv: MethodInvocation             => removeNComponents(withoutImplicits, countParameterLists(inv))
