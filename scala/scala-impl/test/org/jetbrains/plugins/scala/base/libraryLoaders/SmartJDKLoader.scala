@@ -47,7 +47,7 @@ abstract class SmartJDKLoader() extends LibraryLoader {
 
 object SmartJDKLoader {
 
-  private val candidates = Seq(
+  private val jdkPaths = Seq(
     "/usr/lib/jvm",                      // linux style
     "C:\\Program Files\\Java\\",         // windows style
     "C:\\Program Files (x86)\\Java\\",   // windows 32bit style
@@ -71,7 +71,7 @@ object SmartJDKLoader {
   }
 
   private def discoverJDK(jdkVersion: JavaSdkVersion): Option[String] =
-    discoverJre(candidates, jdkVersion).map(_.getParent)
+    discoverJre(jdkPaths, jdkVersion).map(_.getParent)
 
   private def discoverJre(paths: Seq[String], jdkVersion: JavaSdkVersion): Option[File] = {
     val versionMajor = jdkVersion.ordinal().toString
@@ -83,10 +83,13 @@ object SmartJDKLoader {
       fromEnv64.orElse(fromEnv).map(new File(_,"jre"))
     ).flatten
 
+    println(s"XXX SmartJDKLoader looking for jdk. priorityPaths: $priorityPaths, paths: $paths")
+
     priorityPaths.headOption
       .orElse {
         val fullSearchPaths = paths.flatMap { p => versionStrings.map((p, _)) }
         val validPaths = fullSearchPaths.flatMap { case (path,ver) => inJvm(path,ver) }
+        println(s"XXX fullSearchPaths: $fullSearchPaths, validPaths: $validPaths")
         validPaths.headOption
       }
   }
@@ -105,7 +108,7 @@ object SmartJDKLoader {
     }
   }
 
-  private def inJvm(path: String, suffix: String) = {
+  private def inJvm(path: String, versionString: String) = {
     val checkDir = Option(new File(path)).filter(_.exists())
 
     checkDir
@@ -115,7 +118,7 @@ object SmartJDKLoader {
           .listFiles()
           .sortBy(_.getName) // TODO somehow sort by release number to get the newest actually
           .reverse
-          .filter(_.getName.contains(suffix))
+          .filter(_.getName.contains(versionString))
           .flatMap(findJDK)
           .map(new File(_, "jre"))
         }
