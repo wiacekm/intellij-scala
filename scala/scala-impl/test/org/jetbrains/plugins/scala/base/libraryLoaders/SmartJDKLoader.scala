@@ -64,6 +64,7 @@ object SmartJDKLoader {
       val pathOption = SmartJDKLoader.discoverJDK(jdkVersion)
       Assert.assertTrue(s"Couldn't find $jdkVersion", pathOption.isDefined)
       VfsRootAccess.allowRootAccess(pathOption.get)
+      println(s"XXX pathOption: $pathOption")
       val jdk = JavaSdk.getInstance.createJdk(jdkName, pathOption.get, false)
       inWriteAction { jdkTable.addJdk(jdk) }
       jdk
