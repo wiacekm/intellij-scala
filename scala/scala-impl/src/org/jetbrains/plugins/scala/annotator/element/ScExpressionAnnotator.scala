@@ -10,6 +10,7 @@ import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil
 import org.jetbrains.plugins.scala.lang.psi.api.ScalaFile
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScExpression.ExpressionTypeResult
 import org.jetbrains.plugins.scala.lang.psi.api.expr._
+import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScParameter
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.ScMethodType
 import org.jetbrains.plugins.scala.lang.psi.types.{ScType, api}
@@ -43,28 +44,33 @@ object ScExpressionAnnotator extends ElementAnnotator[ScExpression] {
                          (implicit holder: ScalaAnnotationHolder): Unit = {
     implicit val ctx: ProjectContext = element
 
+    def resolvesToMonomorphicMethod(ref: ScReferenceExpression): Boolean = ref match {
+      case ResolvesTo(f: ScFunctionDefinition) => !f.hasTypeParameters
+      case _                                   => true
+    }
+
     @tailrec
     def isInArgumentPosition(expr: ScExpression): Boolean =
       expr.getContext match {
-        case _: ScArgumentExprList               => true
-        case ScInfixExpr.withAssoc(_, _, `expr`) => true
-        case b: ScBlockExpr                      => isInArgumentPosition(b)
-        case p: ScParenthesisedExpr              => isInArgumentPosition(p)
-        case t: ScTuple                          => isInArgumentPosition(t)
-        case ScIf(Some(`expr`), _, _)            => false
-        case i: ScIf                             => isInArgumentPosition(i)
-        case m: ScMatch                          => isInArgumentPosition(m)
-        case _                                   => false
+        case args: ScArgumentExprList              => args.callReference.forall(resolvesToMonomorphicMethod)
+        case ScInfixExpr.withAssoc(_, ref, `expr`) => resolvesToMonomorphicMethod(ref)
+        case b: ScBlockExpr                        => isInArgumentPosition(b)
+        case p: ScParenthesisedExpr                => isInArgumentPosition(p)
+        case t: ScTuple                            => isInArgumentPosition(t)
+        case ScIf(Some(`expr`), _, _)              => false
+        case i: ScIf                               => isInArgumentPosition(i)
+        case m: ScMatch                            => isInArgumentPosition(m)
+        case _                                     => false
       }
 
     // TODO rename (it's not about size, but about inner / outer expressions)
     def isTooBigToHighlight(expr: ScExpression): Boolean = expr match {
-      case _: ScMatch                                => true
+      case _: ScMatch                                   => true
       case bl: ScBlock if bl.resultExpression.isDefined => !fromFunctionLiteral
-      case i: ScIf if i.elseExpression.isDefined     => true
-      case _: ScFunctionExpr                         => !fromFunctionLiteral && (expr.getTextRange.getLength > 20 || expr.textContains('\n'))
-      case _: ScTry                                  => true
-      case _                                         => false
+      case i: ScIf if i.elseExpression.isDefined        => true
+      case _: ScFunctionExpr                            => !fromFunctionLiteral && (expr.getTextRange.getLength > 20 || expr.textContains('\n'))
+      case _: ScTry                                     => true
+      case _                                            => false
     }
 
     def shouldNotHighlight(expr: ScExpression): Boolean = expr.getContext match {

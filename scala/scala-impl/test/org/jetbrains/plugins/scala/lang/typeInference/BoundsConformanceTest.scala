@@ -36,4 +36,26 @@ class BoundsConformanceTest extends ScalaLightCodeInsightFixtureTestAdapter {
       """.stripMargin
     )
   }
+
+  def testSCL17121(): Unit = checkHasErrorAroundCaret(
+    s"""
+       |trait Bar
+       |def t[T <: Bar](t: T): Unit = ???
+       |val f : String = ???
+       |t(${CARET}f)
+       |""".stripMargin
+  )
+
+  def testSCL17532(): Unit = checkHasErrorAroundCaret(
+    s"""
+       |def findFirst(array: Array[String], key: String): Int = {
+       |  def loop(index: Int): Int =
+       |    if (index >= array.length) -1
+       |    else if (array(index) == key) index
+       |    else loop(index + 1)
+       |  loop(0)
+       |}
+       |findFirst(Array(${CARET}1, 2, 3), "3")
+       |""".stripMargin
+  )
 }
