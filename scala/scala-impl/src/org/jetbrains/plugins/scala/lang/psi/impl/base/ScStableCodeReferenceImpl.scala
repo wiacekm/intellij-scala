@@ -25,8 +25,8 @@ import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScFunction, ScMacroD
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.imports._
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.templates.{ScExtendsBlock, ScTemplateBody}
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef._
-import org.jetbrains.plugins.scala.lang.psi.api.toplevel.{ScNamedElement, ScPackaging, ScTypedDefinition}
-import org.jetbrains.plugins.scala.lang.psi.api.{ScPackage, ScalaFile, ScalaPsiElement}
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.{ScPackaging, ScTypedDefinition}
+import org.jetbrains.plugins.scala.lang.psi.api.{ScPackage, ScalaFile}
 import org.jetbrains.plugins.scala.lang.psi.impl.ScalaPsiElementFactory._
 import org.jetbrains.plugins.scala.lang.psi.impl.expr.ScReferenceImpl
 import org.jetbrains.plugins.scala.lang.psi.types.ScType
@@ -482,13 +482,11 @@ class ScStableCodeReferenceImpl(node: ASTNode) extends ScReferenceImpl(node) wit
         }
       }
     }
-    if (!accessibilityCheck)
-      processor.doNotCheckAccessibility()
-    var x = false
+
+    if (!accessibilityCheck) processor.doNotCheckAccessibility()
     //performance improvement
     ScalaPsiUtil.fileContext(this) match {
       case s: ScalaFile if s.isCompiled =>
-        x = true
         //todo: improve checking for this and super
         val refText = getText
 
