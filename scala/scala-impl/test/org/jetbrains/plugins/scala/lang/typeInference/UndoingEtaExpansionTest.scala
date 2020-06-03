@@ -1,8 +1,11 @@
 package org.jetbrains.plugins.scala.lang.typeInference
 
+import org.jetbrains.plugins.scala.{ScalaVersion, Scala_2_13}
 import org.jetbrains.plugins.scala.base.ScalaLightCodeInsightFixtureTestAdapter
 
 class UndoingEtaExpansionTest extends ScalaLightCodeInsightFixtureTestAdapter {
+  override protected def supportedIn(version: ScalaVersion): Boolean = version >= Scala_2_13
+
   def testSimple(): Unit = checkTextHasNoErrors(
     """
       |def foo(f: String => Int): Unit = ()
