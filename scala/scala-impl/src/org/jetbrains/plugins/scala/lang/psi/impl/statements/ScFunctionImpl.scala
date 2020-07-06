@@ -16,7 +16,6 @@ import com.intellij.psi.util.MethodSignatureBackedByPsiMethod
 import com.intellij.util.PlatformIcons
 import com.intellij.util.containers.ContainerUtil
 import javax.swing.Icon
-import org.jetbrains.plugins.scala.ScalaBundle
 import org.jetbrains.plugins.scala.extensions.{PsiClassExt, PsiModifierListOwnerExt, PsiTypeExt, TraversableExt}
 import org.jetbrains.plugins.scala.icons.Icons
 import org.jetbrains.plugins.scala.lang.lexer._
@@ -362,13 +361,11 @@ abstract class ScFunctionImpl[F <: ScFunction](stub: ScFunctionStub[F],
       }
   }
 
-
-  override def superSignatures: Seq[TermSignature] = {
+  override def superSignatures: Seq[TermSignature] =
     TypeDefinitionMembers.getSignatures(containingClass).forName(name).findNode(this) match {
-      case Some(x) => x.supers.map {_.info}
-      case None => Seq.empty
+      case Some(x) => x.supers.map { _.info }
+      case None    => Seq.empty
     }
-  }
 
   override def superSignaturesIncludingSelfType: Seq[TermSignature] = {
     val clazz = containingClass
