@@ -31,12 +31,80 @@ final class ScalaAotCompletionContributor extends ScalaCompletionContributor {
 
   //noinspection ConvertExpressionToSAM
   registerParameterProvider[ScFunction](
+    new ParameterCompletionProvider {}
+  )
+
+  registerParameterProvider[ScPrimaryConstructor](
     new ParameterCompletionProvider {
 
-      //noinspection TypeAnnotation
-      override protected def createConsumer(resultSet: CompletionResultSet, position: PsiElement) = new TypedConsumer(resultSet) {
+      override protected def createElement(text: String,
+                                           context: PsiElement,
+                                           child: PsiElement): ScParameter =
+        createClassParamClausesWithContext(text.parenthesize(), context)
+          .params.head
+    }
+  )
 
-        override protected def createInsertHandler(itemText: String): aot.InsertHandler = new aot.InsertHandler(itemText) {
+  registerParameterProvider[ScFunctionExpr](
+    new ParameterCompletionProvider {
+
+      override protected def createConsumer(resultSet: CompletionResultSet, position: PsiElement) =
+        new UntypedConsumer(resultSet)
+    }
+  )
+
+  registerDeclarationProvider[ScFieldId](
+    new DeclarationCompletionProvider[ScValueDeclaration](ScalaKeyword.VAL, classOf[ScValueDeclaration], classOf[ScVariableDeclaration]) {
+
+      override protected def findTypeElement(declaration: ScValueDeclaration): Option[ScTypeElement] =
+        declaration.typeElement
+
+      override protected def findContext(element: ScValueDeclaration): PsiElement =
+        super.findContext(element).getContext.getContext
+
+    }
+  )
+
+  registerDeclarationProvider[ScFunctionDeclaration](
+    new DeclarationCompletionProvider[ScFunctionDeclaration](ScalaKeyword.DEF, classOf[ScFunctionDeclaration]) {
+
+      override protected def findTypeElement(element: ScFunctionDeclaration): Option[ScTypeElement] =
+        element.returnTypeElement
+    }
+  )
+
+  private def registerParameterProvider[E <: ScalaPsiElement : ClassTag](provider: ParameterCompletionProvider): Unit = extend(
+    BASIC,
+    identifierPattern.withParents(classOf[ScParameter], classOf[ScParameterClause], classOf[ScParameters], classTag[E].runtimeClass.asSubclass(classOf[ScalaPsiElement])),
+    provider
+  )
+
+  private def registerDeclarationProvider[E <: ScalaPsiElement : ClassTag](provider: DeclarationCompletionProvider[_]): Unit = extend(
+    BASIC,
+    identifierWithParentPattern(classTag[E].runtimeClass.asSubclass(classOf[ScalaPsiElement])),
+    provider
+  )
+}
+
+object ScalaAotCompletionContributor {
+
+  import aot.{CompletionProvider => AOTCompletionProvider, InsertHandler => AOTInsertHandler}
+
+  private trait ParameterCompletionProvider extends AOTCompletionProvider[ScParameter] {
+
+    override protected def createElement(text: String,
+                                         context: PsiElement,
+                                         child: PsiElement): ScParameter =
+      createParamClausesWithContext(text.parenthesize(), context, child)
+        .params.head
+
+    override protected def findTypeElement(parameter: ScParameter): Option[ScTypeElement] =
+      parameter.paramType.map(_.typeElement)
+
+    override protected def createConsumer(resultSet: CompletionResultSet, position: PsiElement): Consumer =
+      new TypedConsumer(resultSet) {
+
+        override protected def createInsertHandler(itemText: String): AOTInsertHandler = new AOTInsertHandler(itemText) {
 
           override def handleInsert(decorator: Decorator)
                                    (implicit context: InsertionContext): Unit = {
@@ -75,75 +143,11 @@ final class ScalaAotCompletionContributor extends ScalaCompletionContributor {
             }
         }
       }
-    }
-  )
-
-  registerParameterProvider[ScPrimaryConstructor](
-    new ParameterCompletionProvider {
-
-      override protected def createConsumer(resultSet: CompletionResultSet, position: PsiElement) = new TypedConsumer(resultSet)
-
-      override protected def createElement(text: String,
-                                           context: PsiElement,
-                                           child: PsiElement): ScParameter =
-        createClassParamClausesWithContext(text.parenthesize(), context)
-          .params.head
-    }
-  )
-
-  registerParameterProvider[ScFunctionExpr](
-    (resultSet: CompletionResultSet, _: PsiElement) => new UntypedConsumer(resultSet)
-  )
-
-  registerDeclarationProvider[ScFieldId](
-    new DeclarationCompletionProvider[ScValueDeclaration](ScalaKeyword.VAL, classOf[ScValueDeclaration], classOf[ScVariableDeclaration]) {
-
-      override protected def findTypeElement(declaration: ScValueDeclaration): Option[ScTypeElement] =
-        declaration.typeElement
-
-      override protected def findContext(element: ScValueDeclaration): PsiElement =
-        super.findContext(element).getContext.getContext
-
-    }
-  )
-
-  registerDeclarationProvider[ScFunctionDeclaration](
-    new DeclarationCompletionProvider[ScFunctionDeclaration](ScalaKeyword.DEF, classOf[ScFunctionDeclaration]) {
-
-      override protected def findTypeElement(element: ScFunctionDeclaration): Option[ScTypeElement] =
-        element.returnTypeElement
-    }
-  )
-
-  private def registerParameterProvider[E <: ScalaPsiElement : ClassTag](provider: ParameterCompletionProvider): Unit = extend(
-    BASIC,
-    identifierPattern.withParents(classOf[ScParameter], classOf[ScParameterClause], classOf[ScParameters], classTag[E].runtimeClass.asSubclass(classOf[ScalaPsiElement])),
-    provider
-  )
-
-  private def registerDeclarationProvider[E <: ScalaPsiElement : ClassTag](provider: DeclarationCompletionProvider[_]): Unit = extend(
-    BASIC,
-    identifierWithParentPattern(classTag[E].runtimeClass.asSubclass(classOf[ScalaPsiElement])),
-    provider
-  )
-}
-
-object ScalaAotCompletionContributor {
-
-  private trait ParameterCompletionProvider extends aot.CompletionProvider[ScParameter] {
-
-    override protected def createElement(text: String,
-                                         context: PsiElement,
-                                         child: PsiElement): ScParameter =
-      createParamClausesWithContext(text.parenthesize(), context, child)
-        .params.head
-
-    override protected def findTypeElement(parameter: ScParameter): Option[ScTypeElement] =
-      parameter.paramType.map(_.typeElement)
   }
 
   private abstract class DeclarationCompletionProvider[D <: ScMember with ScDeclaration](keyword: String,
-                                                                                         classes: Class[_ <: ScMember]*) extends aot.CompletionProvider[D] {
+                                                                                         classes: Class[_ <: ScMember]*)
+    extends AOTCompletionProvider[D] {
 
     override protected def addCompletions(resultSet: CompletionResultSet, prefix: String)
                                          (implicit parameters: CompletionParameters, context: ProcessingContext): Unit =
