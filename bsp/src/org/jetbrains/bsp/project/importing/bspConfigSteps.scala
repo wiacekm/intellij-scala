@@ -1,28 +1,40 @@
 package org.jetbrains.bsp.project.importing
 
-import java.awt.BorderLayout
+import java.awt.{BorderLayout, CardLayout}
 import java.io.File
-import java.nio.file.{Path, Paths}
+
 import ch.epfl.scala.bsp4j.BspConnectionDetails
+import com.intellij.build.events.impl.{FinishBuildEventImpl, OutputBuildEventImpl, StartBuildEventImpl, SuccessResultImpl}
+import com.intellij.build.{BuildView, BuildViewManager, DefaultBuildDescriptor}
+import com.intellij.execution.ui.RunContentDescriptor
 import com.intellij.ide.util.projectWizard.{ModuleWizardStep, WizardContext}
 import com.intellij.openapi.progress.{ProgressIndicator, Task}
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBList
 import com.intellij.uiDesigner.core.{GridConstraints, GridLayoutManager, Spacer}
 import com.intellij.util.ui.UI
-import javax.swing.{DefaultListModel, JComponent, JPanel, ListSelectionModel}
+import javax.swing._
+import net.miginfocom.swing.MigLayout
 import org.jetbrains.annotations.Nls
-import org.jetbrains.bsp.{BspBundle, BspUtil}
 import org.jetbrains.bsp.project.importing.BspSetupConfigStep.ConfigSetupTask
 import org.jetbrains.bsp.project.importing.bspConfigSteps._
-import org.jetbrains.bsp.project.importing.setup.{BspConfigSetup, FastpassConfigSetup, MillConfigSetup, NoConfigSetup, SbtConfigSetup}
+import org.jetbrains.bsp.project.importing.setup._
 import org.jetbrains.bsp.protocol.BspConnectionConfig
 import org.jetbrains.bsp.settings.BspProjectSettings._
-import org.jetbrains.plugins.scala.build.IndicatorReporter
+import org.jetbrains.bsp.{BspBundle, BspUtil}
+import org.jetbrains.plugins.scala.ScalaBundle
+import org.jetbrains.plugins.scala.build.BuildToolWindowReporter.CancelBuildAction
+import org.jetbrains.plugins.scala.build.{BuildMessages, BuildToolWindowReporter, IndicatorReporter}
+import org.jetbrains.plugins.scala.extensions.executeOnPooledThread
 import org.jetbrains.plugins.scala.project.Version
 import org.jetbrains.sbt.SbtUtil._
 import org.jetbrains.sbt.project.{MillProjectImportProvider, SbtProjectImportProvider}
+
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Promise}
+import scala.util.Random
 
 object bspConfigSteps {
 
@@ -72,6 +84,33 @@ object bspConfigSteps {
     spacerConstraints.setRow(2)
     spacerConstraints.setVSizePolicy(GridConstraints.SIZEPOLICY_WANT_GROW | GridConstraints.SIZEPOLICY_CAN_GROW)
     parent.add(spacer, spacerConstraints)
+  }
+
+  private[importing] def addTitledList2(parent: JComponent, title: JComponent, list: JBList[String]): Unit = {
+    val layout = new MigLayout("debug")
+//    val manager = new GridLayoutManager(3,1)
+//    manager.setSameSizeVertically(false)
+    parent.setLayout(layout)
+
+//    val titleConstraints = new GridConstraints()
+//    titleConstraints.setRow(0)
+//    titleConstraints.setFill(GridConstraints.FILL_HORIZONTAL)
+    parent.add(title, "wrap, span, grow, dock north")
+
+//    val listConstraints = new GridConstraints()
+//    listConstraints.setRow(1)
+//    listConstraints.setFill(GridConstraints.FILL_BOTH)
+//    listConstraints.setIndent(1)
+    parent.add(list, "wrap")
+
+    list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+
+    val spacer = new Spacer()
+//    val spacerConstraints = new GridConstraints()
+//    spacerConstraints.setRow(2)
+//    spacerConstraints.setVSizePolicy(GridConstraints.SIZEPOLICY_WANT_GROW | GridConstraints.SIZEPOLICY_CAN_GROW)
+    parent.add(spacer, "wrap, grow")
+
   }
 
   def configSetupChoices(workspace: File): List[ConfigSetup] = {
@@ -294,5 +333,96 @@ class BspChooseConfigStep(context: WizardContext, builder: BspProjectImportBuild
   override def isStepVisible: Boolean = {
     updateStep()
     builder.serverConfig == AutoConfig && chooseBspConfig.getItemsCount > 1
+  }
+}
+
+case class DummyResult(n: Int)
+
+class DummyProgressStep extends ModuleWizardStep {
+
+  private val ready = Promise[Unit]()
+
+  private val project = ProjectManager.getInstance().getDefaultProject
+  private val workingDir = new File(".")
+
+  private val progressView: BuildView = {
+    val startTime = System.currentTimeMillis()
+    val descriptor = new DefaultBuildDescriptor("dummyId", "dummy title", workingDir.getAbsolutePath, startTime)
+    val viewManager = new BuildViewManager(project)
+    new BuildView(project, descriptor, "whatKey?", viewManager)
+  }
+
+  private val cards = new CardLayout()
+  private val panel = {
+
+    val cardsPanel = new JPanel(cards)
+
+    val chooserPanel = new JPanel()
+    val chooseSetupTitle = new TitledSeparator(BspBundle.message("bsp.config.steps.setup.config.choose.tool"))
+    val titleWithTip = withTooltip(chooseSetupTitle, BspBundle.message("bsp.config.steps.setup.config.choose.tool.tooltip"))
+    val chooseBspSetupModel = new DefaultListModel[String]
+    chooseBspSetupModel.addElement("foo")
+    chooseBspSetupModel.addElement("thark")
+    val chooseBspSetup = new JBList[String](chooseBspSetupModel)
+    addTitledList2(chooserPanel, titleWithTip, chooseBspSetup)
+    val button = new JButton("run")
+    button.addActionListener(event => runProgressWindowTask())
+    chooserPanel.add(button)
+
+    val progressLayout = new MigLayout("fill, debug 300", "", "")
+    val progressPanel = new JPanel(progressLayout)
+    val title = new TitledSeparator(BspBundle.message("bsp.config.steps.choose.config.title"))
+    progressPanel.add(title, "dock north")
+    progressPanel.add(progressView, "grow, span")
+
+    cardsPanel.add(chooserPanel, "chooser")
+    cardsPanel.add(progressPanel, "progress")
+
+    cardsPanel
+  }
+
+  override def getComponent: JComponent = panel
+
+  override def updateDataModel(): Unit = {
+//    runProgressWindowTask()
+//    Await.ready(ready.future, 1.hour)
+  }
+
+  override def validate(): Boolean = true //ready.isCompleted
+
+  override def onWizardFinished(): Unit = {
+    runProgressWindowTask()
+    Await.ready(ready.future, 1.hour)
+  }
+
+  private def runProgressWindowTask(): Unit = {
+
+    cards.show(panel, "progress")
+
+    val buildId = "myBuildId"
+    val title = "myTitle"
+
+    val reporter = new BuildToolWindowReporter(workingDir, BuildMessages.randomEventId, title, progressView, new CancelBuildAction(ready))
+
+    reporter.start()
+
+    def log(msg: String) = new OutputBuildEventImpl(buildId, msg.trim + System.lineSeparator(), true)
+
+    reporter.log("it begins")
+
+    executeOnPooledThread {
+      reporter.log("smoo!")
+      progressView.onEvent(Random.nextLong(), log("boo!"))
+      Thread.sleep(600)
+      progressView.onEvent(Random.nextLong(), log("bam!"))
+      reporter.log("sam!")
+      Thread.sleep(600)
+      progressView.onEvent(Random.nextLong(), log("blip!"))
+      reporter.log("sip!")
+      Thread.sleep(4600)
+      reporter.finish(BuildMessages.empty.status(BuildMessages.OK))
+      ready.success(())
+    }
+
   }
 }

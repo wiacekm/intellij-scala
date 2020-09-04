@@ -220,6 +220,7 @@ class BspProjectImportProvider(builder: BspProjectImportBuilder)
     builder.autoConfigure(context.getProjectDirectory.toFile)
     builder.setFileToImport(context.getProjectDirectory.toString)
     Array(
+      new DummyProgressStep,
       new BspSetupConfigStep(context, builder, context.getProjectDirectory.toFile),
       new BspChooseConfigStep(context, builder)
     )
@@ -256,3 +257,4 @@ object BspProjectOpenProcessor {
     bspConnectionProtocolSupported || bloopProject || bspConnectionProtocolSupported || sbtProject || millProject
   }
 }
+
