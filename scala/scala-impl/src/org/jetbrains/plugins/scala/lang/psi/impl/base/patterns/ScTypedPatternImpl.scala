@@ -8,7 +8,6 @@ package patterns
 import com.intellij.lang.ASTNode
 import com.intellij.psi._
 import com.intellij.psi.scope.PsiScopeProcessor
-import org.jetbrains.plugins.scala.ScalaBundle
 import org.jetbrains.plugins.scala.extensions.{PsiTypeExt, ifReadAllowed}
 import org.jetbrains.plugins.scala.lang.lexer._
 import org.jetbrains.plugins.scala.lang.parser.ScalaElementType
@@ -51,54 +50,48 @@ class ScTypedPatternImpl private(stub: ScBindingPatternStub[ScTypedPattern], nod
     typePattern match {
       case Some(tp) =>
         if (tp.typeElement == null) return Failure(ScalaBundle.message("no.type.element.for.type.pattern"))
-        val typeElementType: TypeResult =
-          tp.typeElement.`type`().map {
-            case tp: ScExistentialType =>
-              val skolem = tp.quantified
-              skolem.extractClassType match {  //todo: type aliases?
-                case Some((clazz: ScTypeDefinition, subst)) =>
-                  val typeParams = clazz.typeParameters
-                  skolem match {
-                    case ParameterizedType(des, typeArgs) if typeArgs.length == typeParams.length =>
-                      ScParameterizedType(des, typeArgs.zip(typeParams).map {
-                        case (arg: ScExistentialArgument, param: ScTypeParam) =>
-                          val lowerBound =
-                            if (arg.lower.equiv(Nothing)) subst(param.lowerBound.getOrNothing)
-                            else arg.lower //todo: lub?
-                          val upperBound =
-                            if (arg.upper.equiv(Any)) subst(param.upperBound.getOrAny)
-                            else arg.upper //todo: glb?
-                          ScExistentialArgument(arg.name, arg.typeParameters, lowerBound, upperBound)
-                        case (tp: ScType, _: ScTypeParam) => tp
-                      }.toSeq).unpackedType
-                    case _ => tp
-                  }
-                case Some((clazz: PsiClass, subst)) =>
-                  val typeParams: Array[PsiTypeParameter] = clazz.getTypeParameters
-                  skolem match {
-                    case ParameterizedType(des, typeArgs) if typeArgs.length == typeParams.length =>
-                      ScParameterizedType(des, typeArgs.zip(typeParams).map {
-                        case (arg: ScExistentialArgument, param: PsiTypeParameter) =>
-                          val lowerBound = arg.lower
-                          val upperBound =
-                            if (arg.upper.equiv(api.Any)) {
-                              val listTypes: Array[PsiClassType] = param.getExtendsListTypes
-                              if (listTypes.isEmpty) api.Any
-                              else subst(listTypes.toSeq.map(_.toScType()).glb(checkWeak = true))
-                            } else arg.upper //todo: glb?
-                          ScExistentialArgument(arg.name, arg.typeParameters, lowerBound, upperBound)
-                        case (tp: ScType, _) => tp
-                      }.toSeq).unpackedType
-                    case _ => tp
-                  }
-                case _ => tp
-              }
-            case tp: ScType => tp
-          }
-        this.expectedType match {
-          case Some(expectedType) =>
-            typeElementType.map(resType => expectedType.glb(resType, checkWeak = false))
-          case _ => typeElementType
+        tp.typeElement.`type`().map {
+          case tp: ScExistentialType =>
+            val skolem = tp.quantified
+            skolem.extractClassType match {  //todo: type aliases?
+              case Some((clazz: ScTypeDefinition, subst)) =>
+                val typeParams = clazz.typeParameters
+                skolem match {
+                  case ParameterizedType(des, typeArgs) if typeArgs.length == typeParams.length =>
+                    ScParameterizedType(des, typeArgs.zip(typeParams).map {
+                      case (arg: ScExistentialArgument, param: ScTypeParam) =>
+                        val lowerBound =
+                          if (arg.lower.equiv(Nothing)) subst(param.lowerBound.getOrNothing)
+                          else arg.lower //todo: lub?
+                        val upperBound =
+                          if (arg.upper.equiv(Any)) subst(param.upperBound.getOrAny)
+                          else arg.upper //todo: glb?
+                        ScExistentialArgument(arg.name, arg.typeParameters, lowerBound, upperBound)
+                      case (tp: ScType, _: ScTypeParam) => tp
+                    }.toSeq).unpackedType
+                  case _ => tp
+                }
+              case Some((clazz: PsiClass, subst)) =>
+                val typeParams: Array[PsiTypeParameter] = clazz.getTypeParameters
+                skolem match {
+                  case ParameterizedType(des, typeArgs) if typeArgs.length == typeParams.length =>
+                    ScParameterizedType(des, typeArgs.zip(typeParams).map {
+                      case (arg: ScExistentialArgument, param: PsiTypeParameter) =>
+                        val lowerBound = arg.lower
+                        val upperBound =
+                          if (arg.upper.equiv(api.Any)) {
+                            val listTypes: Array[PsiClassType] = param.getExtendsListTypes
+                            if (listTypes.isEmpty) api.Any
+                            else subst(listTypes.toSeq.map(_.toScType()).glb(checkWeak = true))
+                          } else arg.upper //todo: glb?
+                        ScExistentialArgument(arg.name, arg.typeParameters, lowerBound, upperBound)
+                      case (tp: ScType, _) => tp
+                    }.toSeq).unpackedType
+                  case _ => tp
+                }
+              case _ => tp
+            }
+          case tp: ScType => tp
         }
       case None => Failure(ScalaBundle.message("no.type.pattern"))
     }
