@@ -82,7 +82,8 @@ object ScalaKeywordLookupItem {
         keyword match {
           case CASE =>
             adjustLineIndent(targetRange)
-          case MATCH =>
+          case MATCH |
+               CATCH =>
             val caretOffset = caretModel.getOffset
 
             val text = s"{\n$CASE\n}"

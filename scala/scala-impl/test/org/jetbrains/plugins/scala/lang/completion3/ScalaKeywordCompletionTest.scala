@@ -188,4 +188,28 @@ class ScalaKeywordCompletionTest extends ScalaCodeInsightTestBase {
          |}""".stripMargin,
     item = "match"
   )
+
+  def testCatch(): Unit = doCompletionTest(
+    fileText =
+      s"""try {
+         |} c$CARET""".stripMargin,
+    resultText =
+      s"""try {
+         |} catch {
+         |  case $CARET
+         |}""".stripMargin,
+    item = "catch"
+  )
+
+  def testInfixCatch(): Unit = doCompletionTest(
+    fileText =
+      s"""try {
+         |} c$CARET """.stripMargin,
+    resultText =
+      s"""try {
+         |} catch {
+         |  case $CARET
+         |}""".stripMargin,
+    item = "catch"
+  )
 }
