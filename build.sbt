@@ -30,7 +30,6 @@ lazy val scalaCommunity: sbt.Project =
     .dependsOn(
       bsp % "test->test;compile->compile",
       codeInsight % "test->test;compile->compile",
-      dfa % "test->test;compile->compile",
       traceLogger % "test->test;compile->compile",
       traceLogViewer % "test->test;compile->compile",
       conversion % "test->test;compile->compile",
@@ -193,6 +192,7 @@ lazy val scalaImpl: sbt.Project =
     .dependsOn(
       compilerShared,
       scalaApi,
+      dfa,
       macroAnnotations,
       traceLogger,
       decompiler % "test->test;compile->compile",
@@ -242,9 +242,9 @@ lazy val scalaImpl: sbt.Project =
         BuildInfoKey.constant("sbtLatest_0_13", Versions.Sbt.latest_0_13),
         BuildInfoKey.constant("sbtLatest_1_0", Versions.Sbt.latest_1_0),
         BuildInfoKey.constant("sbtLatestVersion", Versions.sbtVersion),
-        BuildInfoKey.constant("sbtStructurePath_0_13", 
+        BuildInfoKey.constant("sbtStructurePath_0_13",
           relativeJarPath(sbtDep("org.jetbrains.scala","sbt-structure-extractor", Versions.sbtStructureVersion, "0.13"))),
-        BuildInfoKey.constant("sbtStructurePath_1_0", 
+        BuildInfoKey.constant("sbtStructurePath_1_0",
           relativeJarPath(sbtDep("org.jetbrains.scala", "sbt-structure-extractor", Versions.sbtStructureVersion, "1.0")))
         )
     )
@@ -479,7 +479,7 @@ lazy val mlCompletionIntegration =
       resolvers += "intellij-dependencies" at "https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/",
       libraryDependencies += "org.jetbrains.intellij.deps.completion" % "completion-ranking-scala" % "0.3.2"
     )
-    
+
 lazy val packageSearchIntegration =
   newProject("packagesearch", file("scala/integration/packagesearch"))
     .dependsOn(scalaImpl)
