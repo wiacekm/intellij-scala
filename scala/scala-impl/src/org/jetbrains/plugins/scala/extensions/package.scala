@@ -28,7 +28,9 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.text.CharArrayUtil
 import com.intellij.util.{ArrayFactory, ExceptionUtil, Processor}
 import org.jetbrains.annotations.{Nls, NonNls, Nullable}
-import org.jetbrains.plugins.scala.caches.UserDataHolderDelegator
+import org.jetbrains.plugins.scala.caches.{BlockModificationTracker, UserDataHolderDelegator}
+import org.jetbrains.plugins.scala.dfa.DfAny
+import org.jetbrains.plugins.scala.dfa.analysis.{DataFlowAnalysis, DfaResult}
 import org.jetbrains.plugins.scala.extensions.implementation.iterator._
 import org.jetbrains.plugins.scala.lang.lexer.ScalaTokenTypes
 import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil.isInheritorDeep
@@ -36,10 +38,11 @@ import org.jetbrains.plugins.scala.lang.psi.api.base.patterns.ScBindingPattern
 import org.jetbrains.plugins.scala.lang.psi.api.base.{Constructor, ScFieldId}
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScNewTemplateDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.{ScClassParameter, ScParameter}
-import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScDeclaredElementsHolder, ScFunction}
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScDeclaredElementsHolder, ScFunction, ScFunctionDefinition}
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef._
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.{ScModifierListOwner, ScNamedElement, ScTypedDefinition}
 import org.jetbrains.plugins.scala.lang.psi.api.{ScalaFile, ScalaPsiElement}
+import org.jetbrains.plugins.scala.lang.psi.cfg.{PsiGraph, PsiToCfgTransformation}
 import org.jetbrains.plugins.scala.lang.psi.fake.FakePsiParameter
 import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.synthetic.ScSyntheticClass
 import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.typedef.MixinNodes
@@ -49,6 +52,7 @@ import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.lang.psi.types.result._
 import org.jetbrains.plugins.scala.lang.psi.types.{ScType, ScTypeExt, TermSignature}
 import org.jetbrains.plugins.scala.lang.psi.{ElementScope, ScalaPsiUtil}
+import org.jetbrains.plugins.scala.macroAnnotations.CachedInUserData
 import org.jetbrains.plugins.scala.project.ProjectContext
 import org.jetbrains.plugins.scala.util.ScEquivalenceUtil.areClassesEquivalent
 import org.jetbrains.plugins.scala.util.ScalaPluginUtils
@@ -124,6 +128,20 @@ package object extensions {
         val paramTypes = method.parameters.map(_.getType.toScType())
         returnType.map(FunctionType(_, paramTypes))
     }
+
+    @CachedInUserData(repr, BlockModificationTracker(repr))
+    def controlFlowGraph: Option[PsiGraph] =
+      repr.asOptionOf[ScFunctionDefinition].flatMap(PsiToCfgTransformation.transform)
+
+    @CachedInUserData(repr, BlockModificationTracker(repr))
+    def dataFlowResult: Option[DfaResult[PsiElement]] =
+      for {
+        graph <- controlFlowGraph
+      } yield {
+        val dfa = new DataFlowAnalysis(graph)
+        dfa.run()
+        dfa.result
+      }
   }
 
   object PsiMethodExt {
@@ -894,6 +912,11 @@ package object extensions {
       val file = element.getContainingFile
       file != null && file.isScala3File
     }
+
+    def dfaValue: Option[DfAny] =
+      element.getContext.asOptionOf[PsiMethod]
+        .flatMap(_.dataFlowResult)
+        .map(_.valueOf(element))
   }
 
   implicit class PsiTypeExt(@Nullable val `type`: PsiType) extends AnyVal {
