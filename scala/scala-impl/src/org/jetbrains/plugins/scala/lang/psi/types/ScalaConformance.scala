@@ -18,7 +18,6 @@ import org.jetbrains.plugins.scala.lang.psi.types.ScalaConformance._
 import org.jetbrains.plugins.scala.lang.psi.types.api._
 import org.jetbrains.plugins.scala.lang.psi.types.api.designator.{DesignatorOwner, ScDesignatorType, ScProjectionType, ScThisType}
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.{NonValueType, ScMethodType, ScTypePolymorphicType}
-import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.AfterUpdate.{ProcessSubtypes, ReplaceWith, Stop}
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.lang.resolve.processor.{CompoundTypeCheckSignatureProcessor, CompoundTypeCheckTypeAliasProcessor}
 import org.jetbrains.plugins.scala.project.ProjectContext
@@ -1048,10 +1047,7 @@ trait ScalaConformance extends api.Conformance with TypeVariableUnification {
       r.visitType(rightVisitor)
       if (result != null) return
 
-      val (updatedWithUndefinedTypes, undefines) = {
-        val remapper = new ExistentialArgumentsToTypeParameters(e.wildcards, UndefinedType(_))
-        (remapper.remapExistentials(e.quantified), remapper.remapped)
-      }
+      val (updatedWithUndefinedTypes, undefines) = e.remapExistentialArguments(UndefinedType(_))
 
       undefines.foreach { undef =>
         val tparam = undef.typeParameter
@@ -1060,10 +1056,8 @@ trait ScalaConformance extends api.Conformance with TypeVariableUnification {
       }
 
       val skolemizeExistentialsOnTheRight = r match {
-        case etpe: ScExistentialType =>
-          new ExistentialArgumentsToTypeParameters(etpe.wildcards, TypeParameterType(_))
-            .remapExistentials(etpe.quantified)
-        case t => t
+        case etpe: ScExistentialType => etpe.remapExistentialArguments(TypeParameterType(_))._1
+        case t                       => t
       }
 
       conformsInner(
@@ -1494,33 +1488,5 @@ private object ScalaConformance {
     case object Lower       extends Bound
     case object Upper       extends Bound
     case object Equivalence extends Bound
-  }
-
-  private class ExistentialArgumentsToTypeParameters[T <: ScType](
-    exs:             Seq[ScExistentialArgument],
-    typeParamToType: TypeParameter => T
-  ) {
-    private[this] lazy val remapExistentials: Map[ScExistentialArgument, T] =
-      exs.map(
-        ex =>
-          ex -> typeParamToType(
-            TypeParameter.deferred(
-              ex.name,
-              ex.typeParameters,
-              () => remapExistentials(ex.lower),
-              () => remapExistentials(ex.upper)
-            )
-          )
-      ).to(Map)
-
-    def remapExistentials(tpe: ScType): ScType =
-      tpe.recursiveUpdate {
-        case arg: ScExistentialArgument => ReplaceWith(remapExistentials.getOrElse(arg, arg))
-        case _: ScExistentialType       => Stop
-        case _                          => ProcessSubtypes
-      }
-
-
-    def remapped: Seq[T] = remapExistentials.values.toSeq
   }
 }

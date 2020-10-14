@@ -45,4 +45,17 @@ class ExistentialAbstractionsTest extends ScalaLightCodeInsightFixtureTestAdapte
       |val a: Foo[({ type L[A] = ZIO[R, E, A] })#L]         forSome { type R; type E } = b
       |""".stripMargin
   )
+
+  def testSCL18275(): Unit = checkTextHasNoErrors(
+    """
+      |import java.io.IOException
+      |import java.nio.file._
+      |import java.util.Comparator
+      |
+      |object Test {
+      |  val path: Path = ???
+      |  Files.walk(path).sorted(Comparator.reverseOrder())
+      |}
+      |""".stripMargin
+  )
 }
