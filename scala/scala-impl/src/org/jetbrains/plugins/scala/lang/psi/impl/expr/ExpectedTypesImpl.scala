@@ -489,16 +489,29 @@ class ExpectedTypesImpl extends ExpectedTypes {
       }
     }
 
+    val resultWithoutExistentials = result.map {
+      case (tpe, te) => dropExistentials(tpe) -> te
+    }
+
     if (fromUnderscore && checkIsUnderscore(expr)) {
       val res = new ArrayBuffer[ParameterType]
-      for (tp <- result) {
+      for (tp <- resultWithoutExistentials) {
         tp._1 match {
           case FunctionType(rt: ScType, _) => res += ((rt, None))
           case _ =>
         }
       }
       res.toArray
-    } else result
+    } else resultWithoutExistentials
+  }
+
+  private def dropExistentials(etpe: ScType): ScType = etpe match {
+    case ex: ScExistentialType => ex.remapExistentialArguments(new ScAbstractType(_))._1
+    case AliasType(_: ScTypeAliasDefinition, Right(lower), _) =>
+      val dropped = dropExistentials(lower)
+      if (dropped eq lower) etpe
+      else                  dropped
+    case other => other
   }
 
   @tailrec
