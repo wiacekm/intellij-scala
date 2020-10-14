@@ -3,11 +3,14 @@ package lang
 package psi
 package types
 
+import gnu.trove.{THashMap, TObjectHashingStrategy}
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScTypeAlias
+import org.jetbrains.plugins.scala.lang.psi.types.ScExistentialArgument.renameExistentialArguments
 import org.jetbrains.plugins.scala.lang.psi.types.api.{TypeParameter, TypeParameterType, ValueType}
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.AfterUpdate.{ProcessSubtypes, Stop}
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.project.ProjectContext
+
 
 /**
   * Nikolay.Tropin
@@ -27,26 +30,23 @@ trait ScExistentialArgument extends NamedType with ValueType {
 
   def initialize(): Unit = {}
 
-  override def equivInner(r: ScType, constraints: ConstraintSystem, falseUndef: Boolean): ConstraintsResult = {
+  override def equivInner(r: ScType, constraints: ConstraintSystem, falseUndef: Boolean): ConstraintsResult =
     r match {
       case arg: ScExistentialArgument =>
-        val s = ScSubstitutor.bind(arg.typeParameters, typeParameters)(TypeParameterType(_))
+        val s           = ScSubstitutor.bind(arg.typeParameters, typeParameters)(TypeParameterType(_))
+        val updateLower = renameExistentialArguments(this.lower, arg.lower)
 
-        def update(bound: ScType): ScType = s(bound).updateRecursively {
-          case `arg` => this
-        }
-
-        val updatedArgLower = update(arg.lower)
-        val t = lower.equiv(updatedArgLower, constraints, falseUndef)
+        val updatedArgLower = updateLower(s(arg.lower))
+        val t               = lower.equiv(updatedArgLower, constraints, falseUndef)
 
         if (t.isLeft)
           return ConstraintsResult.Left
 
-        val updatedArgUpper = update(arg.upper)
+        val updateUpper     = renameExistentialArguments(this.upper, arg.upper)
+        val updatedArgUpper = updateUpper(s(arg.upper))
         upper.equiv(updatedArgUpper, t.constraints, falseUndef)
       case _ => ConstraintsResult.Left
     }
-  }
 
   override def visitType(visitor: ScalaTypeVisitor): Unit = visitor.visitExistentialArgument(this)
 }
@@ -164,4 +164,34 @@ object ScExistentialArgument {
     result
   }
 
+  def renameExistentialArguments(lhs: ScType, rhs: ScType): ScType => ScType = {
+    val lhsBuilder = Array.newBuilder[ScExistentialArgument]
+    val rhsBuilder = Array.newBuilder[ScExistentialArgument]
+
+    lhs.visitRecursively {
+      case arg: ScExistentialArgument => lhsBuilder += arg
+      case _                          => ()
+    }
+
+    rhs.visitRecursively {
+      case arg: ScExistentialArgument => rhsBuilder += arg
+      case _                          => ()
+    }
+
+    val rightToLeft = {
+      val byName = new TObjectHashingStrategy[ScExistentialArgument] {
+        override def computeHashCode(t: ScExistentialArgument): Int                       = t.name.hashCode
+        override def equals(t: ScExistentialArgument, t1: ScExistentialArgument): Boolean = t.name == t1.name
+      }
+
+      val map = new THashMap[ScExistentialArgument, ScExistentialArgument](byName)
+      rhsBuilder.result().zip(lhsBuilder.result()).foreach { case (x, y) => map.put(x, y) }
+      map
+    }
+
+    tpe =>
+      tpe.updateRecursively {
+        case arg: ScExistentialArgument => rightToLeft.getOrDefault(arg, arg)
+      }
+  }
 }

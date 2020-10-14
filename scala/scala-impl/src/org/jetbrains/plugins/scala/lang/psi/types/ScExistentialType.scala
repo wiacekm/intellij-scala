@@ -5,6 +5,7 @@ package types
 
 import gnu.trove.{THashMap, TObjectHashingStrategy}
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.{ScTypeParam, TypeParamId}
+import org.jetbrains.plugins.scala.lang.psi.types.ScExistentialType.ExistentialArgumentsToTypeParameters
 import org.jetbrains.plugins.scala.lang.psi.types.api._
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue._
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.AfterUpdate.{ProcessSubtypes, ReplaceWith, Stop}
@@ -82,8 +83,9 @@ final class ScExistentialType private (val quantified: ScType,
     r.unpackedType match {
       case ex: ScExistentialType =>
         val simplified = ex.simplify()
-        if (ex != simplified) return this.equiv(simplified, constraints, falseUndef)
-        ScExistentialType.equivImpl(this, ex, constraints, falseUndef)
+
+        if (ex != simplified) this.equiv(simplified, constraints, falseUndef)
+        else                  ex.quantified.equiv(this.quantified, constraints, falseUndef)
       case poly: ScTypePolymorphicType if poly.typeParameters.length == wildcards.length =>
         val list = wildcards.zip(poly.typeParameters)
         val iterator = list.iterator
@@ -119,6 +121,11 @@ final class ScExistentialType private (val quantified: ScType,
 
   //to make it different from `quantified.hashCode`
   override def hashCode(): Int = quantified #+ ScExistentialType
+
+  def remapExistentialArguments[T <: ScType](f: TypeParameter => T): (ScType, Seq[T]) = {
+    val remapper = new ExistentialArgumentsToTypeParameters(wildcards, f)
+    (remapper.remapExistentials(quantified), remapper.remapped)
+  }
 }
 
 object ScExistentialType {
@@ -220,56 +227,32 @@ object ScExistentialType {
     result
   }
 
-  private def equivImpl(left : ScExistentialType,
-                        right: ScExistentialType,
-                        constraints: ConstraintSystem,
-                        falseUndef: Boolean): ConstraintsResult = {
+  private class ExistentialArgumentsToTypeParameters[T <: ScType](
+    exs:             Seq[ScExistentialArgument],
+    typeParamToType: TypeParameter => T
+  ) {
+    private[this] lazy val remapExistentials: Map[ScExistentialArgument, T] =
+      exs
+        .map(
+          ex =>
+            ex -> typeParamToType(
+              TypeParameter.deferred(
+                ex.name,
+                ex.typeParameters,
+                () => remapExistentials(ex.lower),
+                () => remapExistentials(ex.upper)
+              )
+            )
+        )
+        .to(Map)
 
-    val rightToLeft: java.util.Map[ScExistentialArgument, ScExistentialArgument] = {
-      val byName: TObjectHashingStrategy[ScExistentialArgument] = new TObjectHashingStrategy[ScExistentialArgument] {
-        override def computeHashCode(t: ScExistentialArgument): Int = t.name.hashCode
-        override def equals(t: ScExistentialArgument, t1: ScExistentialArgument): Boolean = t.name == t1.name
+    def remapExistentials(tpe: ScType): ScType =
+      tpe.recursiveUpdate {
+        case arg: ScExistentialArgument => ReplaceWith(remapExistentials.getOrElse(arg, arg))
+        case _: ScExistentialType       => Stop
+        case _                          => ProcessSubtypes
       }
-      val map = new THashMap[ScExistentialArgument, ScExistentialArgument](byName)
-      right.wildcards.zip(left.wildcards).foreach {
-        case (x, y) => map.put(x, y)
-      }
-      map
-    }
 
-    def replaceRightToLeft(rightSubtype: ScType): ScType = rightSubtype.updateRecursively {
-      case arg: ScExistentialArgument =>
-        rightToLeft.getOrDefault(arg, arg)
-    }
-
-    var lastConstraints = constraints
-    val leftIterator = left.wildcards.iterator
-    val rightIterator = right.wildcards.iterator
-
-    while (leftIterator.hasNext && rightIterator.hasNext) {
-      val left = leftIterator.next
-      val right = rightIterator.next
-
-      val subst = ScSubstitutor.bind(right.typeParameters, left.typeParameters)(TypeParameterType(_))
-      val updatedRightLower = replaceRightToLeft(subst(right.lower))
-
-      val lowerResult = left.lower.equiv(updatedRightLower, lastConstraints, falseUndef)
-      if (lowerResult.isLeft)
-        return ConstraintsResult.Left
-
-      lastConstraints = lowerResult.constraints
-
-      val updatedRightUpper = replaceRightToLeft(subst(right.upper))
-      val upperResult = left.upper.equiv(updatedRightUpper, lastConstraints, falseUndef)
-
-      if (upperResult.isLeft)
-        return ConstraintsResult.Left
-
-      lastConstraints = upperResult.constraints
-    }
-
-    val updatedRightQuantified = replaceRightToLeft(right.quantified)
-    updatedRightQuantified.equiv(left.quantified, constraints, falseUndef)
+    def remapped: Seq[T] = remapExistentials.values.toSeq
   }
-
 }
