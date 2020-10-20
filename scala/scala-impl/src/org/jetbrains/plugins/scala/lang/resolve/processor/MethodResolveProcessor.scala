@@ -544,7 +544,6 @@ object MethodResolveProcessor {
     }
   }
 
-  @scala.annotation.tailrec
   def candidates(
     proc:            MethodResolveProcessor,
     _input:          Set[ScalaResolveResult],
@@ -672,8 +671,17 @@ object MethodResolveProcessor {
 
     if (filtered.isEmpty && mapped.isEmpty) input.map(r => r.copy(notCheckedResolveResult = true))
     else if (filtered.isEmpty)
-      if (useExpectedType) candidates(proc, _input, useExpectedType = false)
-      else                 mapped
+      if (useExpectedType) {
+        val withoutExpected = candidates(proc, _input, useExpectedType = false)
+        withoutExpected.map { srr =>
+          val srrWithExpected = mapped.find(_ == srr)
+
+          val problemsWithExpected =
+            srrWithExpected.fold(collection.Seq.empty[ApplicabilityProblem])(_.problems)
+
+          srr.copy(problems = problemsWithExpected)
+        }
+      } else mapped
     else {
       val len =
         if (argumentClauses.isEmpty) 0

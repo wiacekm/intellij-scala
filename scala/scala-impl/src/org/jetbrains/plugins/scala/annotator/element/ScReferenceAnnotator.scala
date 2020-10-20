@@ -176,9 +176,18 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
                   case ParameterSpecifiedMultipleTimes(assignment) =>
                     holder.createErrorAnnotation(assignment.leftExpression,
                       ScalaBundle.message("annotator.error.parameter.specified.multiple.times"))
-                  case WrongTypeParameterInferred => //todo: ?
+                  case WrongTypeParameterInferred =>
+                    call.argumentExpressions.foreach { e =>
+                      for {
+                        tpe  <- e.`type`().toOption
+                        eTpe <- e.expectedType()
+                        if !typeMismatchShown && !tpe.conforms(eTpe)
+                      } {
+                        typeMismatchShown = true
+                        registerTypeMismatchError(tpe, eTpe, e)
+                      }
+                    }
                   case ExpectedTypeMismatch => //will be reported later
-
                   case AmbiguousImplicitParameters(_) =>
                   case DefaultTypeParameterMismatch(_, _) =>
                   case DoesNotTakeTypeParameters =>
@@ -460,7 +469,7 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
     }
   }
 
-  def nameWithSignature(f: PsiNamedElement) = nameOf(f) + signatureOf(f)
+  def nameWithSignature(f: PsiNamedElement): String = nameOf(f) + signatureOf(f)
 
   private def nameOf(f: PsiNamedElement) = f match {
     case m: ScMethodLike if m.isConstructor => m.containingClass.name

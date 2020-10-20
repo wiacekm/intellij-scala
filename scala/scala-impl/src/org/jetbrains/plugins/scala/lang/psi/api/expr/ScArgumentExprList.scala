@@ -10,7 +10,7 @@ import org.jetbrains.plugins.scala.lang.lexer.ScalaTokenTypes
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params._
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.Parameter
 
-/** 
+/**
 * @author Alexander Podkhalyuzin
 * Date: 07.03.2008
 */
@@ -85,5 +85,5 @@ trait ScArgumentExprList extends ScArguments {
 }
 
 object ScArgumentExprList {
-  def unapplySeq(e: ScArgumentExprList): Some[Seq[ScExpression]] = Some(e.exprs.toSeq)
+  def unapplySeq(e: ScArgumentExprList): Some[Seq[ScExpression]] = Some(e.exprs)
 }

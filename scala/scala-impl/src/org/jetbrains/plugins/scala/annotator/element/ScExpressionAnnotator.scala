@@ -91,7 +91,9 @@ object ScExpressionAnnotator extends ElementAnnotator[ScExpression] {
 
       registerUsedImports(element, importUsed)
 
-      if (isTooBigToHighlight(element) || (!fromFunctionLiteral && isInArgumentPosition(element)) || shouldNotHighlight(element)) return
+      if (isTooBigToHighlight(element)
+        || (!fromFunctionLiteral && isInArgumentPosition(element))
+        || shouldNotHighlight(element)) return
 
       element.expectedTypeEx(fromUnderscore) match {
         case Some((tp: ScType, _)) if tp equiv api.Unit => //do nothing
