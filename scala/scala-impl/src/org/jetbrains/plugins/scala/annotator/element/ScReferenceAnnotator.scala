@@ -266,7 +266,7 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
     if (resolve.length != 1) {
       def addUnknownSymbolProblem(): Unit = {
         if (resolve.isEmpty) {
-          createUnknownSymbolProblem(refElement)(Seq(ScalaImportTypeFix(refElement)))
+          createUnknownSymbolProblem(refElement)
         }
       }
 
@@ -359,17 +359,17 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
     def isOnTopLevel(element: PsiElement) = element match {
       case scalaPsi: ScalaPsiElement => !scalaPsi.parents.exists(_.isInstanceOf[ScTypeDefinition])
       case _ => false
-    } 
-    
+    }
+
     //don't highlight ambiguous definitions, if they are resolved to multiple top-level declarations
     //needed for worksheet and scala notebook files (e.g. zeppelin)
     def isTopLevelResolve =
       resolve.length > 1 && resolve.headOption.map(_.element).filter(isOnTopLevel).exists {
-        firstElement => 
+        firstElement =>
           val fFile = firstElement.getContainingFile
           resolve.tail.map(_.element).forall(nextEl => nextEl.getContainingFile == fFile && isOnTopLevel(nextEl))
       }
-    
+
     if (typeAware && resolve.length != 1 && !(refElement.containingScalaFile.exists(_.isMultipleDeclarationsAllowed) && isTopLevelResolve)) {
       val parent = refElement.getParent
       def addCreateApplyOrUnapplyFix(errorWithRefName: String => String, fix: ScTypeDefinition => IntentionAction): Boolean = {
@@ -412,7 +412,6 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
   }
 
   private def createUnknownSymbolProblem(reference: ScReference)
-                                        (fixes: Seq[IntentionAction] = UnresolvedReferenceFixProvider.fixesFor(reference))
                                         (implicit holder: ScalaAnnotationHolder) = {
     val identifier = reference.nameId
     val annotation = holder.createErrorAnnotation(
@@ -420,6 +419,8 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
       ScalaBundle.message("cannot.resolve", identifier.getText)
     )
     annotation.setHighlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+
+    val fixes = UnresolvedReferenceFixProvider.fixesFor(reference)
 
     annotation.registerFixes(fixes: _*)
     annotation.registerFix(ReportHighlightingErrorQuickFix)
@@ -456,7 +457,7 @@ object ScReferenceAnnotator extends ElementAnnotator[ScReference] {
         case _: ScMethodCall if resolveCount > 1 =>
           val error = ScalaBundle.message("cannot.resolve.overloaded", refElement.refName)
           holder.createErrorAnnotation(refElement.nameId, error)
-        case _ => createUnknownSymbolProblem(refElement)()
+        case _ => createUnknownSymbolProblem(refElement)
       }
     }
   }
