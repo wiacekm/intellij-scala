@@ -677,7 +677,7 @@ object MethodResolveProcessor {
           val srrWithExpected = mapped.find(_ == srr)
 
           val problemsWithExpected =
-            srrWithExpected.fold(collection.Seq.empty[ApplicabilityProblem])(_.problems)
+            srrWithExpected.fold(Seq.empty[ApplicabilityProblem])(_.problems)
 
           srr.copy(problems = problemsWithExpected)
         }
