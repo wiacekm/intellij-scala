@@ -64,7 +64,7 @@ private trait ExpressionTransformer { this: Transformer =>
 
       case scMatch: ScMatch =>
         val subject = transformExpressionOrDefault(scMatch.expression, DfAny.Top)
-        return transformCaseClauses(scMatch.caseClauses, subject, rreq)
+        return transformCaseClauses(scMatch.caseClauses.toSeq.flatMap(_.caseClauses), subject, rreq)
 
       case ret: ScReturn =>
         val scopeInfo = builder.currentScopeInfo
