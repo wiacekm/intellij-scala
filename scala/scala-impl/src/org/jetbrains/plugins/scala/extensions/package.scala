@@ -28,7 +28,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.text.CharArrayUtil
 import com.intellij.util.{ArrayFactory, ExceptionUtil, Processor}
 import org.jetbrains.annotations.{Nls, NonNls, Nullable}
-import org.jetbrains.plugins.scala.caches.{BlockModificationTracker, UserDataHolderDelegator}
+import org.jetbrains.plugins.scala.caches.{BlockModificationTracker, ModTracker, UserDataHolderDelegator}
 import org.jetbrains.plugins.scala.dfa.DfAny
 import org.jetbrains.plugins.scala.dfa.analysis.{DataFlowAnalysis, DfaResult}
 import org.jetbrains.plugins.scala.extensions.implementation.iterator._
@@ -902,7 +902,7 @@ package object extensions {
     @CachedInUserData(element, BlockModificationTracker(element))
     def controlFlowGraph: Option[PsiGraph] = PsiToCfgTransformation.transform(element)
 
-    @CachedInUserData(element, BlockModificationTracker(element))
+    @CachedInUserData(element, ModTracker.anyScalaPsiChange)
     def dataFlowResult: Option[DfaResult[PsiElement]] =
       for {
         graph <- this.controlFlowGraph
