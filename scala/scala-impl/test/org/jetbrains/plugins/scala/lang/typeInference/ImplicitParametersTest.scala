@@ -37,4 +37,16 @@ class ImplicitParametersTest extends ImplicitParametersTestBase {
        |}
     """.stripMargin
   )
+
+  def testScalatestEmptinessOption(): Unit = checkNoImplicitParameterProblems(
+    s"""
+       |object Test {
+       |  trait Emptiness[-T]
+       |  implicit def emptinessOfOption[E, OPT[e] <: Option[e]]: Emptiness[OPT[E]] = ???
+       |  implicit def emptinessOfAnyRefWithParameterlessIsEmptyMethod[T <: AnyRef { def isEmpty: Boolean}]: Emptiness[T] = ???
+       |
+       |  ${START}implicitly[Emptiness[Option[Int]]]$END
+       |}
+       |""".stripMargin
+  )
 }

@@ -1025,8 +1025,10 @@ trait ScalaConformance extends api.Conformance with TypeVariableUnification {
       r.visitType(rightVisitor)
       if (result != null) return
 
-      checkEquiv()
-      if (result != null) return
+      if (!e.isExistentialAbstraction) {
+        checkEquiv()
+        if (result != null) return
+      }
 
       rightVisitor =
         new ExistentialArgumentVisitor with ParameterizedExistentialArgumentVisitor
