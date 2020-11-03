@@ -1025,7 +1025,7 @@ trait ScalaConformance extends api.Conformance with TypeVariableUnification {
       r.visitType(rightVisitor)
       if (result != null) return
 
-      checkEquiv()
+//      checkEquiv()
       if (result != null) return
 
       rightVisitor =
