@@ -413,8 +413,6 @@ lazy val runtimeDependencies =
       }
     )
 
-lazy val ideaRunner = createRunnerProject(scalaCommunity, "idea-runner")
-
 //lazy val jmhBenchmarks =
 //  newProject("benchmarks", file("scala/benchmarks"))
 //    .dependsOn(scalaImpl % "test->test")
