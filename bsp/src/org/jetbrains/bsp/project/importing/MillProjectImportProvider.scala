@@ -40,11 +40,18 @@ object MillProjectImportProvider {
   }
 
   // Legacy Mill =< 0.8.0
-  private def isLegacyBspCompatible(workspace: File) = workspace.listFiles().exists { buildScript =>
-    !buildScript.isDirectory &&
-      buildScript.getName == "build.sc" &&
-      Using.resource(Source.fromFile(buildScript))(
-        _.getLines().contains("import $ivy.`com.lihaoyi::mill-contrib-bsp:$MILL_VERSION`")
-      )
-  }
+  private val millContribPattern = "import $ivy.`com.lihaoyi::mill-contrib-bsp:$MILL_VERSION`"
+  private def isLegacyBspCompatible(workspace: File) =
+    Option(workspace.listFiles())
+      .getOrElse(Array.empty)
+      .exists { buildScript =>
+        !buildScript.isDirectory &&
+          buildScript.getName == "build.sc" &&
+          Using.resource(Source.fromFile(buildScript)) { source =>
+            source
+              .getLines()
+              .contains(millContribPattern)
+          }
+      }
+
 }
