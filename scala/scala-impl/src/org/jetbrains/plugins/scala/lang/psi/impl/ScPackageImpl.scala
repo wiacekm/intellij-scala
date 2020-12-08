@@ -173,10 +173,10 @@ object ScPackageImpl {
               var stop = false
               while (classes.hasNext && !stop) {
                 val clazz = classes.next()
-                clazz match {
-                  case cls: ScClass => cls.getSyntheticImplicitMethod.foreach(processor.execute(_, state))
-                  case _            => ()
-                }
+//                clazz match {
+//                  case cls: ScClass => cls.getSyntheticImplicitMethod.foreach(processor.execute(_, state))
+//                  case _            => ()
+//                }
 
                 stop = clazz.containingClass == null && !processor.execute(clazz, state)
               }
