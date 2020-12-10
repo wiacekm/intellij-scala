@@ -22,7 +22,7 @@ class ScalaDfaTestBase extends ScalaLightCodeInsightFixtureTestAdapter {
 
 
   def check(code: String, expectedResults: (Int, DfAny)*): Unit = {
-    val (codeWithoutMarkers, ranges) = MarkersUtils.extractMarkers(code.strip)
+    val (codeWithoutMarkers, ranges) = MarkersUtils.extractMarker(code.strip)
     assert(ranges.length == expectedResults.size)
     val actualFile = configureFromFileText(codeWithoutMarkers)
 

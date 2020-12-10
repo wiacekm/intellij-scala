@@ -15,7 +15,7 @@ import org.jetbrains.plugins.scala.dfa.lattice.JoinSemiLattice
  * We can either be sure that it is always or never null.
  * But we can also be unsure and it could be either way.
  *
- * Additionally we can track if the value can be null but is usually should not.
+ * Additionally we can track if the value can be null but is usually not.
  * This is needed because returns or parameters in Scala are not null
  * by convention, but they still can be null.
  *
