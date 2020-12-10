@@ -2,7 +2,9 @@ package org.jetbrains.plugins.scala.lang.psi.cfg
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.plugins.scala.dfa._
+import org.jetbrains.plugins.scala.lang.psi.api.expr.{ScExpression, ScReferenceExpression}
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
+import org.jetbrains.plugins.scala.extensions._
 import org.jetbrains.plugins.scala.lang.psi.api.{ScalaElementVisitor, ScalaFile, ScalaPsiElement}
 
 object PsiToCfgTransformation {
@@ -10,16 +12,16 @@ object PsiToCfgTransformation {
     try Some(transformUnsafe(element))
     catch { case _: UnsupportedTransformationException => None }
 
-  private[cfg] def transformUnsafe(element: PsiElement): PsiGraph = {
+  final def transformUnsafe(element: PsiElement): PsiGraph = {
     implicit val builder: Builder = cfg.Builder.newBuilder()
 
     element match {
       case file: ScalaFile if file.isScriptFile || file.isWorksheetFile =>
         val transformer = new Transformer(builder, thisVariable = None, file.getProject)
-        file.acceptChildren(new ScalaElementVisitor {
-          override def visitScalaElement(element: ScalaPsiElement): Unit =
-            transformer.transformAny(element)
-        })
+        file.children.foreach {
+          case scPsi: ScalaPsiElement => transformer.transformAny(scPsi)
+          case _ => // ignore external(?) elements
+        }
       case fun: ScFunctionDefinition =>
         val thisVariable = builder.addArgument("this", new AnyRef)._1
         val transformer = new Transformer(builder, Some(thisVariable), fun.getProject)
