@@ -36,7 +36,7 @@ final class DataFlowAnalysis[Info](val graph: cfg.Graph[Info],
   def hasFinished: Boolean = workQueue.isEmpty
   def finishedStates: Seq[State] = endStates
 
-  def init(args: Seq[DfAny] = Seq.fill(graph.arguments.size)(DfAny.Top)): Unit = {
+  def init(args: Seq[DfAny] = graph.arguments.map(_.abstractValue)): Unit = {
     assert(args.size == graph.arguments.size)
 
     workQueue.clear()

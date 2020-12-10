@@ -2,10 +2,10 @@ package org.jetbrains.plugins.scala.lang.psi.cfg
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.plugins.scala.dfa._
-import org.jetbrains.plugins.scala.lang.psi.api.expr.{ScExpression, ScReferenceExpression}
-import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
 import org.jetbrains.plugins.scala.extensions._
-import org.jetbrains.plugins.scala.lang.psi.api.{ScalaElementVisitor, ScalaFile, ScalaPsiElement}
+import org.jetbrains.plugins.scala.lang.dfa.ScalaDfa
+import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
+import org.jetbrains.plugins.scala.lang.psi.api.{ScalaFile, ScalaPsiElement}
 
 object PsiToCfgTransformation {
   final def transform(element: PsiElement): Option[PsiGraph] =
@@ -23,10 +23,10 @@ object PsiToCfgTransformation {
           case _ => // ignore external(?) elements
         }
       case fun: ScFunctionDefinition =>
-        val thisVariable = builder.addArgument("this", new AnyRef)._1
+        val thisVariable = builder.addParameter("this", new AnyRef, DfAnyRef.Top)._1
         val transformer = new Transformer(builder, Some(thisVariable), fun.getProject)
         for (param <- fun.parameters) {
-          builder.addArgument(param.name, param)
+          builder.addParameter(param.name, param, ScalaDfa.paramTypeToValue(param))
         }
 
         for (body <- fun.body) {

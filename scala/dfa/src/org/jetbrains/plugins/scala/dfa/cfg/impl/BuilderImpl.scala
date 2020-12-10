@@ -137,12 +137,12 @@ private[cfg] class BuilderImpl[SourceInfo] extends Builder[SourceInfo] {
   }
 
   private val argumentsBuilder = BuilderWithSize.newBuilder[ArgumentImpl](ArraySeq)
-  override def addArgument(name: String, anchor: AnyRef): (Variable, Value) = {
+  override def addParameter(name: String, anchor: AnyRef, abstractValue: DfAny): (Variable, Value) = {
     val argumentsAdded = argumentsBuilder.elementsAdded
     assert(argumentsAdded == nodesBuilder.elementsAdded, "Cannot add arguments after having added other nodes")
 
     val variable = newVariable(name, anchor)
-    val argNode = addNode(new ArgumentImpl(name))
+    val argNode = addNode(new ArgumentImpl(name, abstractValue))
     assert(argNode.valueId == argumentsAdded)
     writeVariable(variable, argNode)
     argumentsBuilder += argNode

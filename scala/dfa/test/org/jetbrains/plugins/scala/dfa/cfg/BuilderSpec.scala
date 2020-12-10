@@ -87,8 +87,8 @@ class BuilderSpec extends AnyFunSuite with Matchers with BuilderMatchers {
   test("arguments") {
     val builder = newBuilder
 
-    builder.addArgument("arg1", new AnyRef)
-    builder.addArgument("arg2", new AnyRef)
+    builder.addParameter("arg1", new AnyRef, DfUnit.Concrete)
+    builder.addParameter("arg2", new AnyRef, DfUnit.Concrete)
 
     builder.finish() should disassembleTo(
       """
@@ -105,7 +105,7 @@ class BuilderSpec extends AnyFunSuite with Matchers with BuilderMatchers {
     builder.constant(DfInt.Concrete(3))
 
     an [AssertionError] should be thrownBy
-      builder.addArgument("blub", new AnyRef)
+      builder.addParameter("blub", new AnyRef, DfUnit.Concrete)
   }
 
   test("already used labels are rejected") {
