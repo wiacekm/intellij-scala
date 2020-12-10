@@ -16,6 +16,9 @@ object DfAny {
   sealed trait Concrete extends DfAny
   val Bottom: DfNothing.type = DfNothing
 
+  lazy val withoutNull: DfAny = join[DfAny](DfAnyVal.Top, DfAnyRef.Top)
+  lazy val withNullNotExpected: DfAny = join[DfAny](DfAnyVal.Top, DfAnyRef.Top, DfNull.Unexpected)
+
   implicit val lattice: Lattice[DfAny] = new ProductLattice[DfAny](Top, Bottom, Array(DfAnyVal.lattice, DfAnyRef.lattice, DfNull.lattice)) {
     override protected def createTuple(elements: Array[DfAny]): DfAny =
       if (elements.forall(_ == DfNothing)) DfNothing
