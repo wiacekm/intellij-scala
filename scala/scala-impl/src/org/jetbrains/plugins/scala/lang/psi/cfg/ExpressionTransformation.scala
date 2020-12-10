@@ -103,13 +103,15 @@ private trait ExpressionTransformation { this: Transformer =>
     })
 
   private def transformReference(reference: ScReferenceExpression): builder.Value = attachSourceInfo(reference) {
+    def readVariableFor(e: PsiNamedElement): builder.Value =
+      builder.tryReadVariable(variable(e)).getOrElse(InvocationInfo(None, Some(e), Seq.empty).transform())
     reference.bind() match {
       case Some(ResolvesToObject(obj)) =>
         InvocationInfo(None, Some(obj), Seq.empty)
           .transform()
         
       case Some(result) if reference.refName != result.name && !(result.name == "apply" || result.name == "update") =>
-        builder.readVariable(variable(result.parentElement.get))
+        readVariableFor(result.parentElement.get)
 
       case Some(ResolvesToFunction(func)) =>
         InvocationInfo(reference.qualifier, Some(func), Seq.empty)
@@ -122,7 +124,7 @@ private trait ExpressionTransformation { this: Transformer =>
             InvocationInfo(qualifier, Some(prop), Seq.empty)
               .transform()
           case None =>
-            builder.readVariable(variable(prop))
+            readVariableFor(prop)
         }
 
       case None =>
