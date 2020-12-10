@@ -19,8 +19,11 @@ private trait ExpressionTransformation { this: Transformer =>
   final def transformExpressionOrDefault(expr: Option[ScExpression], default: DfAny, rreq: ResultReq): rreq.Result[builder.Value] =
     expr.fold(rreq.ifNeeded(builder.constant(default)))(transformExpression(_, rreq))
 
-
   final def transformExpression(expr: ScExpression, rreq: ResultReq): rreq.Result[builder.Value] = attachSourceInfoIfSome(expr) {
+    transformExpressionInner(expr, rreq)
+  }
+
+  private[this] final def transformExpressionInner(expr: ScExpression, rreq: ResultReq): rreq.Result[builder.Value] =
     Some(expr match {
         // **************** Literals **************** //
       case ScBooleanLiteral(bool) => builder.constant(DfBool(bool))
@@ -98,7 +101,6 @@ private trait ExpressionTransformation { this: Transformer =>
 
       case e => transformationNotSupported(e)
     })
-  }
 
   private def transformReference(reference: ScReferenceExpression): builder.Value = attachSourceInfo(reference) {
     reference.bind() match {
