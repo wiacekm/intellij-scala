@@ -155,6 +155,8 @@ private[cfg] class BuilderImpl[SourceInfo] extends Builder[SourceInfo] {
 
   override def readVariable(variable: Variable): Value =
     currentScope.variables(variable)
+  override def tryReadVariable(variable: Variable): Option[Value] =
+    currentScope.variables.get(variable)
   override def writeVariable(variable: Variable, value: Value): Unit = {
     startScheduledDeadCodeBlock()
     currentScope.variables += variable -> value

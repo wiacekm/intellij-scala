@@ -16,6 +16,7 @@ trait Builder[SourceInfo] {
   def constant(const: DfAny): Value
 
   def readVariable(variable: Variable): Value
+  def tryReadVariable(variable: Variable): Option[Value]
   def writeVariable(variable: Variable, value: Value): Unit
 
   def readProperty(base: Value, property: Property): Value
