@@ -12,7 +12,7 @@ trait Builder[SourceInfo] {
   type LoopLabel
   type ScopeInfo
 
-  def addArgument(name: String, anchor: AnyRef): (Variable, Value)
+  def addParameter(name: String, anchor: AnyRef, abstractValue: DfAny): (Variable, Value)
   def constant(const: DfAny): Value
 
   def readVariable(variable: Variable): Value

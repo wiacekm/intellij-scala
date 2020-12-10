@@ -12,7 +12,7 @@ class DataFlowAnalysisSpec extends AnyFunSuite with Matchers {
     val argSource = new Source
     val constSource = new Source
 
-    val (_, argValue) = builder.addArgument("arg", new AnyRef)
+    val (_, argValue) = builder.addParameter("arg", new AnyRef, DfUnit.Concrete)
     builder.addSourceInfo(argValue, argSource)
 
     val constValue = builder.constant(DfInt(10))

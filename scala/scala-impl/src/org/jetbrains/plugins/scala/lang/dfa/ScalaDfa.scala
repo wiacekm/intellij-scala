@@ -7,9 +7,10 @@ import org.jetbrains.plugins.scala.dfa.analysis.{DataFlowAnalysis, DfaResult}
 import org.jetbrains.plugins.scala.dfa.cfg.CallInfo
 import org.jetbrains.plugins.scala.extensions.PsiTypeExt
 import org.jetbrains.plugins.scala.lang.psi.api.ScalaPsiElement
+import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScParameter
 import org.jetbrains.plugins.scala.lang.psi.cfg.PsiGraph
 import org.jetbrains.plugins.scala.lang.psi.types.ScType
-import org.jetbrains.plugins.scala.lang.psi.types.api.StdType
+import org.jetbrains.plugins.scala.lang.psi.types.api.{StdType, StdTypes}
 
 object ScalaDfa {
   val specialMethodProcessorFactories: SpecialMethodProcessorFactories = Map(
@@ -35,8 +36,7 @@ object ScalaDfa {
   def nullability(notNull: Boolean, nullable: Boolean, isScala: Boolean = true): Nullability =
     if (notNull) Nullability.NeverNull
     else if (nullable) Nullability.MaybeNull
-    else if (isScala) Nullability.MaybeNullButNotExpected
-    else Nullability.MaybeNull
+    else Nullability.MaybeNullButNotExpected
 
   def typeToValue(ty: ScType, nullability: Nullability = Nullability.MaybeNull): DfAny = {
     import StdType.{Name => StdName}
@@ -71,7 +71,9 @@ object ScalaDfa {
   def returnTypeToValue(method: PsiMethod): DfAny =
     typeToValue(method.getReturnType.toScType()(method), ScalaDfa.nullability(method))
 
+  def paramTypeToValue(param: ScParameter): DfAny =
+    typeToValue(param.`type`().getOrElse(StdTypes.instance(param).AnyRef), ScalaDfa.nullability(param))
+
   def paramTypeToValue(param: PsiParameter): DfAny =
     typeToValue(param.getType.toScType()(param), ScalaDfa.nullability(param))
-
 }
