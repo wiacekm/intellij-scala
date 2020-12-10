@@ -37,6 +37,8 @@ trait Constant extends Value {
 trait Argument extends Value {
   def argumentName: String
   def argumentIndex: Int
+
+  def abstractValue: DfAny
 }
 
 trait PhiValue extends Value {
