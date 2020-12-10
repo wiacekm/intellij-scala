@@ -27,7 +27,7 @@ private trait InfixCallTransformation { this: Transformer =>
             resultValue <- originalValue.op(arg)
             exprRef.update(idx, resultValue)
           */
-          ???
+          transformationNotSupported(infixCall)
         case leftRef@ScReferenceExpression.withQualifier(qualifier) =>
           /*
             qualifier.refName op= arg
@@ -39,7 +39,7 @@ private trait InfixCallTransformation { this: Transformer =>
 
             !!!! could also be call to refName and refName_=
           */
-          ???
+          transformationNotSupported(infixCall)
         case ScReferenceExpression(variable: ScNamedElement) =>
           /*
             var op= arg
@@ -48,7 +48,7 @@ private trait InfixCallTransformation { this: Transformer =>
             originalValue <- varRef
             varRef <- originalValue.op(arg)
           */
-          val varRef  = builder.readVariable(cfg.variable(variable))
+          val varRef  = builder.tryReadVariable(cfg.variable(variable)).getOrElse(transformationNotSupported(infixCall))
           invocInfo.transform(thisRef = Some(varRef))
         case _ =>
           // forgot something? Also react to errors

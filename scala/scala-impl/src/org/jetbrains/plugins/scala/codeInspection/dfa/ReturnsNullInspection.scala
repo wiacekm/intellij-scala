@@ -11,14 +11,19 @@ import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
 
 class ReturnsNullInspection extends LocalInspectionTool {
   override final def buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): ScalaElementVisitor = new ScalaElementVisitor {
-    override def visitFunctionDefinition(fun: ScFunctionDefinition): Unit =
-      for {
-        result <- fun.dataFlowResult
-        expr <- fun.returnUsages
-      } checkReturn(expr, result)
+    override def visitFunctionDefinition(fun: ScFunctionDefinition): Unit = {
+      import com.intellij.codeInsight.AnnotationUtil._
+      val flags = CHECK_EXTERNAL | CHECK_HIERARCHY | CHECK_INFERRED | CHECK_TYPE
+      if (!fun.hasUnitResultType && !isAnnotated(fun, NULLABLE, flags)) {
+        for {
+          result <- fun.dataFlowResult
+          expr <- fun.returnUsages
+        } checkReturn(expr, result)
+      }
+    }
 
     private def checkReturn(expr: ScExpression, result: DfaResult[PsiElement]): Unit = {
-      if (result.valueOf(expr).nullability.canBeNullAndIsExpected) {
+      if (result.valueOfOpt(expr).exists(_.nullability.canBeNullAndIsExpected)) {
         holder.registerProblem(expr, ScalaInspectionBundle.message("this.might.return.null.consider.adding.nullable"))
       }
     }

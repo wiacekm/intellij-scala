@@ -111,6 +111,8 @@ private trait ExpressionTransformation { this: Transformer =>
           .transform()
         
       case Some(result) if reference.refName != result.name && !(result.name == "apply" || result.name == "update") =>
+        if (result.parentElement.isEmpty)
+          transformationNotSupported(reference)
         readVariableFor(result.parentElement.get)
 
       case Some(ResolvesToFunction(func)) =>

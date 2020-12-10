@@ -851,7 +851,6 @@ package object extensions {
     def dataFlowResult: Option[DfaResult[PsiElement]] =
       this.controlFlowGraph.map(computeResult)
 
-    @CachedInUserData(element, ModTracker.anyScalaPsiChange)
     def dfaValue: Option[DfAny] =
       element.withParents
         .find(_.is[ScFunctionDefinition, PsiFile])
