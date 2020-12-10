@@ -1,10 +1,13 @@
 package org.jetbrains.plugins.scala.lang.psi.cfg
 
-import com.intellij.psi.{PsiElement, PsiNameIdentifierOwner}
+import com.intellij.psi.{PsiElement, PsiMethod, PsiNameIdentifierOwner}
+import org.jetbrains.plugins.scala.dfa._
 import org.jetbrains.plugins.scala.dfa.cfg.CallInfo
 import org.jetbrains.plugins.scala.extensions._
+import org.jetbrains.plugins.scala.lang.psi.api.ScalaPsiElement
 import org.jetbrains.plugins.scala.lang.psi.api.expr._
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScParameter
+import org.jetbrains.plugins.scala.lang.psi.types.api.StdType
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.Parameter
 
 import scala.annotation.nowarn
@@ -84,7 +87,35 @@ private trait InvocationTransformation { this: Transformer =>
         case Some(named: PsiNameIdentifierOwner) => named.name
         case _ => "<unknown>"
       }
-      CallInfo(name, isStatic = false)
+      val ret = funcRef match {
+        case Some(method: PsiMethod) =>
+          import StdType.{Name => StdName}
+          def isScala = method.isInstanceOf[ScalaPsiElement]
+          def nully =
+            if (method.hasAnnotation("org.jetbrains.annotations.NotNull")) DfNull.Bottom
+            else if (method.hasAnnotation("org.jetbrains.annotations.Nullable")) DfNull.Top
+            else if (isScala) DfNull.Unexpected
+            else DfNull.Top
+
+          method.getReturnType.toScType() match {
+            case stdTy: StdType =>
+              stdTy.name match {
+                case StdName.Int => DfInt.Top
+                case StdName.Null => DfNull.Top
+                case StdName.Nothing => DfNothing
+                case StdName.Unit => DfUnit.Top
+                case StdName.Boolean => DfUnit.Top
+                case StdName.Any => DfAny.Top
+                case StdName.AnyRef => DfAnyRef.Top | nully
+                case StdName.AnyVal => DfAnyVal.Top
+                case _ => DfAny.withoutNull
+              }
+            case _ =>
+              DfAnyRef.Top | nully
+          }
+        case _ => DfAny.withNullNotExpected
+      }
+      CallInfo(name, isStatic = false, abstractReturnValue = ret)
     }
 
     def transformThisRef(): Option[builder.Value] =
