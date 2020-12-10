@@ -1358,6 +1358,12 @@
                          groupPath="Scala" groupKey="group.dataflow"
                          shortName="DfaReturnsNull"
                          enabledByDefault="true" language="Scala" isInternal="true" />
+        <localInspection implementationClass="org.jetbrains.plugins.scala.codeInspection.dfa.NullUseInspection"
+                         bundle="messages.ScalaInspectionBundle"
+                         key="displayname.access.null.reference"
+                         groupPath="Scala" groupKey="group.dataflow"
+                         shortName="DfaUseNull"
+                         enabledByDefault="true" language="Scala" isInternal="true" />
 
         <!--collection inspections-->
         <!--size-->

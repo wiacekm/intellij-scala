@@ -1,5 +1,6 @@
 package org.jetbrains.plugins.scala.lang.dfa
 
+import com.intellij.codeInsight.AnnotationUtil
 import com.intellij.psi.{PsiElement, PsiJvmModifiersOwner, PsiMethod, PsiParameter}
 import org.jetbrains.plugins.scala.dfa.{DfAny, DfAnyRef, DfAnyVal, DfBool, DfInt, DfNothing, DfNull, DfUnit, Nullability}
 import org.jetbrains.plugins.scala.dfa.analysis.DataFlowAnalysis.SpecialMethodProcessorFactories
@@ -26,12 +27,15 @@ object ScalaDfa {
     dfa.result
   }
 
-  def nullability(psi: PsiJvmModifiersOwner): Nullability =
+  def nullability(psi: PsiJvmModifiersOwner): Nullability = {
+    import AnnotationUtil._
+    val flags = CHECK_EXTERNAL | CHECK_HIERARCHY | CHECK_INFERRED | CHECK_TYPE
     nullability(
-      notNull =  psi.hasAnnotation("org.jetbrains.annotations.NotNull"),
-      nullable = psi.hasAnnotation("org.jetbrains.annotations.Nullable"),
+      notNull =  isAnnotated(psi, NON_NLS, flags),
+      nullable = isAnnotated(psi, NULLABLE, flags),
       isScala =  psi.isInstanceOf[ScalaPsiElement]
     )
+  }
 
   def nullability(notNull: Boolean, nullable: Boolean, isScala: Boolean = true): Nullability =
     if (notNull) Nullability.NeverNull
