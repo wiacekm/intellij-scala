@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{Callable, ScheduledFuture, TimeUnit, ConcurrentMap => JConcurrentMap, Future => JFuture}
 import java.util.regex.Pattern
 import java.util.{Arrays, Set => JSet}
-
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.extapi.psi.StubBasedPsiElementBase
 import com.intellij.ide.plugins.DynamicPluginListener
@@ -40,13 +39,15 @@ import org.jetbrains.plugins.scala.caches.{BlockModificationTracker, ModTracker,
 import org.jetbrains.plugins.scala.dfa.DfAny
 import org.jetbrains.plugins.scala.dfa.analysis.{DataFlowAnalysis, DfaResult}
 import org.jetbrains.plugins.scala.extensions.implementation.iterator._
+import org.jetbrains.plugins.scala.lang.dfa.ScalaDfa
+import org.jetbrains.plugins.scala.lang.dfa.ScalaDfa.computeResult
 import org.jetbrains.plugins.scala.lang.lexer.ScalaTokenTypes
 import org.jetbrains.plugins.scala.lang.psi.ScalaPsiUtil.isInheritorDeep
 import org.jetbrains.plugins.scala.lang.psi.api.base.patterns.ScBindingPattern
 import org.jetbrains.plugins.scala.lang.psi.api.base.{Constructor, ScFieldId}
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScNewTemplateDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.{ScClassParameter, ScParameter}
-import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScDeclaredElementsHolder, ScFunction}
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScDeclaredElementsHolder, ScFunction, ScFunctionDefinition}
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef._
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.{ScModifierListOwner, ScNamedElement, ScTypedDefinition}
 import org.jetbrains.plugins.scala.lang.psi.api.{ScalaFile, ScalaPsiElement}
@@ -843,21 +844,19 @@ package object extensions {
       file != null || file.isScala3File
     }
 
-    @CachedInUserData(element, BlockModificationTracker(element))
+    @CachedInUserData(element, ModTracker.anyScalaPsiChange)
     def controlFlowGraph: Option[PsiGraph] = PsiToCfgTransformation.transform(element)
 
     @CachedInUserData(element, ModTracker.anyScalaPsiChange)
     def dataFlowResult: Option[DfaResult[PsiElement]] =
-      for {
-        graph <- this.controlFlowGraph
-      } yield {
-        val dfa = new DataFlowAnalysis(graph)
-        dfa.run()
-        dfa.result
-      }
+      this.controlFlowGraph.map(computeResult)
 
+    @CachedInUserData(element, ModTracker.anyScalaPsiChange)
     def dfaValue: Option[DfAny] =
-      dataFlowResult.map(_.valueOf(element))
+      element.withParents
+        .find(_.is[ScFunctionDefinition, PsiFile])
+        .flatMap(_.dataFlowResult)
+        .flatMap(_.valueOfOpt(element))
   }
 
   implicit class PsiTypeExt(val `type`: PsiType) extends AnyVal {
