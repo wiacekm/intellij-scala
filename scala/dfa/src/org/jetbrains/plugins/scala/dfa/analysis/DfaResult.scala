@@ -10,4 +10,7 @@ case class DfaResult[Info](graph: Graph[Info], values: ArraySeq[DfAny]) {
 
   def valueOf(element: Info): DfAny =
     values(graph.valueForSource(element).valueId)
+
+  def valueOfOpt(element: Info): Option[DfAny] =
+    graph.valueForSource.get(element).map(value => values(value.valueId))
 }
