@@ -29,7 +29,7 @@ import scala.collection.immutable.HashSet
 trait ScalaConformance extends api.Conformance with TypeVariableUnification {
   typeSystem: api.TypeSystem =>
 
-  override protected def conformsComputable(key: Key,
+  override protected def conformsComputable(key: Key,,,,
                                             visited: Set[PsiClass]): Computable[ConstraintsResult] =
     new Computable[ConstraintsResult] {
       override def compute(): ConstraintsResult = {
