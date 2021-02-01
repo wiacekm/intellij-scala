@@ -9,8 +9,8 @@ intellijPluginName in ThisBuild := "Scala"
 
 intellijBuild in ThisBuild := Versions.intellijVersion
 
-intellijPlatform in ThisBuild := IntelliJPlatform.IdeaCommunity
-
+intellijPlatform in ThisBuild := intellijPlatform.in(Global).??(IntelliJPlatform.IdeaCommunity).value
+//intellijAttachSources in ThisBuild := false
 resolvers in ThisBuild ++=
   BintrayJetbrains.allResolvers :+
     Resolver.typesafeIvyRepo("releases") :+
@@ -155,7 +155,7 @@ lazy val scalaImpl: sbt.Project =
       libraryDependencies ++= DependencyGroups.scalaCommunity :+
         "org.scala-lang" % "scala3-library_3.0.0-M2" % "3.0.0-M2" % Runtime, // TODO Runtime dependencies must be packaged automatically.
 //      addCompilerPlugin(Dependencies.macroParadise),
-      intellijPlugins := Seq(
+      intellijPlugins ++= Seq(
         "org.intellij.intelliLang",
         "com.intellij.java-i18n",
         "org.jetbrains.android",
@@ -166,8 +166,8 @@ lazy val scalaImpl: sbt.Project =
         "org.jetbrains.idea.maven",      // TODO remove after extracting the SBT module (which depends on Maven)
         "JUnit"
       ).map(_.toPlugin),
-      intellijPluginJars :=
-        intellijPluginJars.value.filterNot(cp => cp.data.getName.contains("junit-jupiter-api")),
+//      intellijPluginJars :=
+//        intellijPluginJars.value.filterNot(cp => cp.data.getName.contains("junit-jupiter-api")),
       packageMethod := PackagingMethod.MergeIntoOther(scalaCommunity),
       packageAdditionalProjects := Seq(tastyRuntime, scala3LibraryJar),
       packageLibraryMappings ++= Seq(
@@ -290,7 +290,8 @@ lazy val bsp =
     )
     .settings(
       libraryDependencies ++= DependencyGroups.bsp,
-      intellijMainJars := Seq.empty
+      intellijPlugins += "JUnit".toPlugin,
+//      intellijMainJars := Seq.empty
     )
 
 // Integration with other IDEA plugins
