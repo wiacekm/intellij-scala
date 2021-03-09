@@ -672,8 +672,8 @@ object MethodResolveProcessor {
 
     if (filtered.isEmpty && mapped.isEmpty) input.map(r => r.copy(notCheckedResolveResult = true))
     else if (filtered.isEmpty)
-      if (useExpectedType) candidates(proc, _input, useExpectedType = false)
-      else                 mapped
+      if (useExpectedType && input.size > 1) candidates(proc, _input, useExpectedType = false)
+      else                                   mapped
     else {
       val len =
         if (argumentClauses.isEmpty) 0
