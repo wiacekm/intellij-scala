@@ -523,3 +523,4 @@ addCommandAlias("runDfaTests", "dfa/test")
 communityFullClasspath in ThisBuild :=
   deduplicatedClasspath(fullClasspath.in(scalaCommunity, Test).value, fullClasspath.in(scalaCommunity, Compile).value)
 
+ThisBuild / pushRemoteCacheTo := Some(MavenCache("local-cache", baseDirectory.value / "build-cache"))
