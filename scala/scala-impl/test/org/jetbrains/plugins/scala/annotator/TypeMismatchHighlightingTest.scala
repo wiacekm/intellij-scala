@@ -419,8 +419,8 @@ class TypeMismatchHighlightingTest extends ScalaHighlightingTestBase {
       |object Mapper extends HighPriorityMapperConversions {
       |  implicit def mapperFromFutureResponseHFunction[A, F, FR, H[_]](f: F)(implicit
       |                                                                       ftp: FnToProduct.Aux[F, A => FR],
-      |                                                                       ttf: ToTwitterFuture[H],
       |                                                                       ev: FR <:< H[Response],
+      |                                                                       ttf: ToTwitterFuture[H],
       |  ): Mapper.Aux[A, Response] = null
       |}
       |
