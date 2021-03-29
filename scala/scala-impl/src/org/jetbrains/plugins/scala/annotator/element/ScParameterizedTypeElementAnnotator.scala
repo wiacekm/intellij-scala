@@ -13,6 +13,7 @@ import org.jetbrains.plugins.scala.lang.psi.types.api.designator.{DesignatorOwne
 import org.jetbrains.plugins.scala.lang.psi.types.api.{ParameterizedType, TypeParameter, TypeParameterType}
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.lang.psi.types.{ScExistentialArgument, ScExistentialType, ScType, TypePresentationContext}
+import org.jetbrains.plugins.scala.util.DebugLogger
 
 object ScParameterizedTypeElementAnnotator extends ElementAnnotator[ScParameterizedTypeElement] {
 
@@ -76,7 +77,7 @@ object ScParameterizedTypeElementAnnotator extends ElementAnnotator[ScParameteri
   }
 
   private def checkBounds(arg: ScTypeElement, argTy: ScType, param: ScTypeParam, substitute: ScSubstitutor)
-                         (implicit holder: ScalaAnnotationHolder, tcp: TypePresentationContext): Unit = {
+                         (implicit holder: ScalaAnnotationHolder, tcp: TypePresentationContext): Unit = DebugLogger.func() {
     lazy val argTyText = argTy.presentableText
     for (upperBound <- param.upperBound.toOption if !argTy.conforms(substitute(upperBound))) {
       holder.createErrorAnnotation(arg, ScalaBundle.message("type.arg.does.not.conform.to.upper.bound", argTyText, upperBound.presentableText, param.name))

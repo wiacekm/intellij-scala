@@ -372,4 +372,81 @@ class TypeMismatchHighlightingTest extends ScalaHighlightingTestBase {
     "val x = (p: Int) => 1; val v: Int = x",
     Hint("x", ": Int => Int"),
     Error("x", "Expression of type Int => Int doesn't conform to expected type Int"))
+
+
+
+
+
+
+
+
+  def testBlub(): Unit = assertNoErrors(
+    """
+      |def OkInt: Output[Int] = null
+      |
+      |def makeEndPoint(mapper: Mapper[Int :: Int :: HNil]): Endpoint[mapper.Out] = null
+      |
+      |def div: Endpoint[Int] = makeEndPoint { (i: Int, i2: Int) => OkInt }
+      |
+      |///////////////////////////////////////////////////////////////////////////////////////////
+      |sealed trait HList extends Product with Serializable
+      |final case class ::[+H, +T <: HList](head : H, tail : T) extends HList
+      |sealed trait HNil extends HList
+      |
+      |///////////////////////////////////////////////////////////////////////////////////////////
+      |abstract class Response
+      |
+      |trait Endpoint[A]
+      |trait Output[+A]
+      |trait Mapper[A] {
+      |  type Out
+      |}
+      |
+      |class EndpointMapper[A] {
+      |  final def apply(mapper: Mapper[A]): Endpoint[mapper.Out] = null
+      |}
+      |
+      |///////////////////////////////////////////////////////////////////////////////////////////
+      |trait HighPriorityMapperConversions {
+      |  type Aux[A, B] = Mapper[A] { type Out = B }
+      |
+      |  implicit def mapperFromOutputHFunction[A, B, F, OB](f: F)(implicit
+      |                                                            ftp: FnToProduct.Aux[F, A => OB],
+      |                                                            ev: OB <:< Output[B]
+      |  ): Mapper.Aux[A, B] = null
+      |}
+      |
+      |object Mapper extends HighPriorityMapperConversions {
+      |  implicit def mapperFromFutureResponseHFunction[A, F, FR, H[_]](f: F)(implicit
+      |                                                                       ftp: FnToProduct.Aux[F, A => FR],
+      |                                                                       ttf: ToTwitterFuture[H],
+      |                                                                       ev: FR <:< H[Response],
+      |  ): Mapper.Aux[A, Response] = null
+      |}
+      |
+      |///////////////////////////////////////////////////////////////////////////////////////////
+      |abstract class Future[+A]
+      |
+      |trait ToTwitterFuture[F[_]]
+      |
+      |object ToTwitterFuture {
+      |  implicit val identity: ToTwitterFuture[Future] = null
+      |}
+      |
+      |///////////////////////////////////////////////////////////////////////////////////////////
+      |trait FnToProduct[-F] {
+      |  type Out
+      |}
+      |
+      |object FnToProduct extends FnToProductInstances
+      |
+      |trait FnToProductInstances extends scala.AnyRef {
+      |  type Aux[F, Out0] = FnToProduct[F] {
+      |    type Out = Out0
+      |  }
+      |
+      |  implicit def fnToProduct2[A, B, Res] : Aux[(A, B) => Res, A :: B :: HNil => Res] = null
+      |}
+      |""".stripMargin
+  )
 }

@@ -25,7 +25,7 @@ import org.jetbrains.plugins.scala.lang.resolve.ScalaResolveResult
 import org.jetbrains.plugins.scala.macroAnnotations.CachedWithRecursionGuard
 import org.jetbrains.plugins.scala.project.ProjectPsiElementExt
 import org.jetbrains.plugins.scala.project.ScalaLanguageLevel.{Scala_2_11, Scala_2_13}
-import org.jetbrains.plugins.scala.util.SAMUtil
+import org.jetbrains.plugins.scala.util.{DebugLogger, SAMUtil}
 
 import scala.annotation.tailrec
 
@@ -128,7 +128,7 @@ trait ScExpression extends ScBlockStatement
     expectedOption:  Option[ScType] = None,
     ignoreBaseTypes: Boolean        = false,
     fromUnderscore:  Boolean        = false
-  ): ExpressionTypeResult = {
+  ): ExpressionTypeResult = DebugLogger.func(this) {
     def isJavaReflectPolymorphic =
       this.scalaLanguageLevelOrDefault >= Scala_2_11 &&
         ScalaPsiUtil.isJavaReflectPolymorphicSignature(this)
@@ -137,6 +137,9 @@ trait ScExpression extends ScBlockStatement
     else {
       val expected = expectedOption.orElse(this.expectedType(fromUnderscore = fromUnderscore))
       val tr       = this.getTypeWithoutImplicits(ignoreBaseTypes, fromUnderscore)
+
+      DebugLogger.log("Expected type: ", expected)
+      DebugLogger.log("Type without implicits: ", tr)
 
       (expected, tr.toOption) match {
         case (Some(expType), Some(tp))
@@ -517,7 +520,7 @@ object ScExpression {
     }
   }
 
-  private def shape(expression: ScExpression, ignoreAssign: Boolean = false): Option[ScType] = {
+  private def shape(expression: ScExpression, ignoreAssign: Boolean = false): Option[ScType] = DebugLogger.func() {
     import expression.projectContext
 
     def shapeIgnoringAssign(maybeExpression: Option[ScExpression]) = maybeExpression.flatMap {

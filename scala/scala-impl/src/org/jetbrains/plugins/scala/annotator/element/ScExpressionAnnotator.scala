@@ -2,6 +2,7 @@ package org.jetbrains.plugins.scala
 package annotator
 package element
 
+import com.intellij.diagnostic.DebugLogManager.DebugLogLevel
 import org.jetbrains.plugins.scala.annotator.AnnotatorUtils.{annotationWithoutHighlighting, shouldIgnoreTypeMismatchIn, smartCheckConformance}
 import org.jetbrains.plugins.scala.annotator.quickfix.{AddBreakoutQuickFix, ChangeTypeFix, WrapInOptionQuickFix}
 import org.jetbrains.plugins.scala.annotator.usageTracker.UsageTracker.registerUsedImports
@@ -17,6 +18,7 @@ import org.jetbrains.plugins.scala.lang.psi.types.api.designator.DesignatorOwner
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.ScMethodType
 import org.jetbrains.plugins.scala.lang.psi.types.{ScType, api}
 import org.jetbrains.plugins.scala.project.ProjectContext
+import org.jetbrains.plugins.scala.util.DebugLogger
 
 import scala.annotation.tailrec
 
@@ -87,7 +89,7 @@ object ScExpressionAnnotator extends ElementAnnotator[ScExpression] {
       case _ => false
     }
 
-    def checkExpressionTypeInner(fromUnderscore: Boolean): Unit = {
+    def checkExpressionTypeInner(fromUnderscore: Boolean): Unit = DebugLogger.func() {
       val smartExpectedType = element.smartExpectedType(fromUnderscore)
       val ExpressionTypeResult(exprType, importUsed, implicitFunction) =
         element.getTypeAfterImplicitConversion(expectedOption = smartExpectedType, fromUnderscore = fromUnderscore)

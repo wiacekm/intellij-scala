@@ -160,7 +160,8 @@ object DependencyGroups {
     ivy2,
     scalastyle,
     scalariform,
-    compilerIndicesProtocol
+    compilerIndicesProtocol,
+    "com.lihaoyi" %% "upickle" % "1.3.8",
   )
 
   val bsp: Seq[ModuleID] = Seq(

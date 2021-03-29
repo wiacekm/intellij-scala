@@ -5,8 +5,9 @@ import com.intellij.psi.{PsiDocumentManager, PsiElement, PsiFile}
 import org.jetbrains.plugins.scala.TypecheckerTests
 import org.jetbrains.plugins.scala.annotator.hints.AnnotatorHints
 import org.jetbrains.plugins.scala.base.ScalaFixtureTestCase
-import org.jetbrains.plugins.scala.extensions.PsiElementExt
+import org.jetbrains.plugins.scala.extensions.{ObjectExt, PsiElementExt}
 import org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode
+import org.jetbrains.plugins.scala.lang.psi.api.expr.ScExpression
 import org.jetbrains.plugins.scala.util.assertions.MatcherAssertions
 import org.junit.experimental.categories.Category
 import org.junit.Assert.fail
@@ -54,7 +55,7 @@ abstract class ScalaHighlightingTestBase extends ScalaFixtureTestCase with Match
 
     implicit val mock: AnnotatorHolderMock = new AnnotatorHolderMock(file)
 
-    file.depthFirst().foreach(annotate(_))
+    file.depthFirst().filter(e => e.is[ScExpression] && !e.textMatches("null")).foreach(annotate(_))
 
     val messages = mock.annotations.filter {
       case Error(_, null) | Error(null, _) => false
