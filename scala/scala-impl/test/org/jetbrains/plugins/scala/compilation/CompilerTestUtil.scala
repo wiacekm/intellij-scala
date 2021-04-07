@@ -5,7 +5,7 @@ import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.util.registry.{Registry, RegistryValue}
 import com.intellij.util.xmlb.XmlSerializerUtil
 import org.jetbrains.plugins.scala.compiler.ScalaCompileServerSettings
-import org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode
+import org.jetbrains.plugins.scala.compilerBasedHighlighting.ScalaHighlightingMode
 
 import scala.util.Try
 

@@ -44,58 +44,20 @@ class ScalaGoToDeclarationHandler extends GotoDeclarationHandler {
     if (sourceElement == null) return null
     if (!sourceElement.getLanguage.isKindOf(ScalaLanguage.INSTANCE)) return null
 
-    val maybeParent = sourceElement.parent
-    sourceElement.getNode.getElementType match {
-      case IsTemplateDefinition() =>
-        val typeDefinition = PsiTreeUtil.getParentOfType(element, classOf[ScTypeDefinition])
-        typeDefinition.baseCompanion.map(_.nameId.getPrevSiblingNotWhitespace).toArray
-
-      case ScalaTokenTypes.tASSIGN =>
-        maybeParent
-          .collect { case assign: ScAssignment => assign }
-          .flatMap { assign => Option(assign.assignNavigationElement) }
-          .map { Array(_) }
-          .getOrElse { getGotoDeclarationTargetsForEnumerator(maybeParent) }
-
-      case ScalaTokenTypes.kTHIS =>
-        val maybeResult = maybeParent.flatMap {
-          case self: ScSelfInvocation => self.bind
-          case _ => None
-        }
-
-        maybeResult match {
-          case Some(result) => Array(result)
-          case _ => null
-        }
-
-      case ScalaTokenTypes.kIF =>
-        getGotoDeclarationTargetsForEnumerator(maybeParent)
-
-      case ScalaTokenTypes.tCHOOSE =>
-        getGotoDeclarationTargetsForEnumerator(maybeParent)
-
-      case ScalaTokenTypes.tIDENTIFIER =>
-        val reference = containingFile.findReferenceAt(sourceElement.getTextRange.getStartOffset)
-        if (reference == null)
-          return null
-
-        val result = getGotoDeclarationTargetsForElement(reference, maybeParent)
-
-        if ((result == null || result.isEmpty) && isTastyEnabledFor(element)) {
-          targetElementByTasty(containingFile.getProject, sourceElement, offset)
-            .map(Array(_))
-            .getOrElse(result)
-        }
-        else
-          result
-      case _ => null
-    }
+    val result = findTargetElements(containingFile, sourceElement)
+    if ((result == null || result.isEmpty) && isTastyEnabledFor(sourceElement))
+      findTargetElementsByTasty(containingFile.getProject, sourceElement, offset)
+        .map(Array(_))
+        .getOrElse(result)
+    else
+      result
   }
 
   override def getActionText(context: DataContext): String = null
 }
 
 object ScalaGoToDeclarationHandler {
+
   private def getGotoDeclarationTargetsForEnumerator(maybeParent: Option[PsiElement]): Array[PsiElement] = {
     maybeParent
       .collect { case enum: ScEnumerator => enum }
@@ -131,19 +93,64 @@ object ScalaGoToDeclarationHandler {
     }.toArray
   }
 
-  @Measure
-  private def targetElementByTasty(project: Project, sourceElement: PsiElement, caretOffset: Int): Option[PsiElement] = {
-    for (tastyPath <- TastyPath(sourceElement);
-         tastyFile <- TastyReader.read(tastyPath); // IDEA shows "Resolving Reference..." modal progress
-         (file, offset) <- referenceTargetAt(caretOffset, tastyFile);
-         virtualFile <- Option(VfsUtil.findFileByIoFile(new File(project.getBasePath, file), false));
-         psiFile <- Option(PsiManager.getInstance(project).findFile(virtualFile));
-         targetElement <- Option(psiFile.findElementAt(offset)))
-    yield {
-      showTastyNotification("Navigation") // Internal mode
-      targetElement
+  def findTargetElements(containingFile: PsiFile, sourceElement: PsiElement): Array[PsiElement] = {
+    val maybeParent = sourceElement.parent
+    sourceElement.getNode.getElementType match {
+      case IsTemplateDefinition() =>
+        val typeDefinition = PsiTreeUtil.getParentOfType(sourceElement, classOf[ScTypeDefinition])
+        typeDefinition.baseCompanion.map(_.nameId.getPrevSiblingNotWhitespace).toArray
+
+      case ScalaTokenTypes.tASSIGN =>
+        maybeParent
+          .collect { case assign: ScAssignment => assign }
+          .flatMap { assign => Option(assign.assignNavigationElement) }
+          .map { Array(_) }
+          .getOrElse { getGotoDeclarationTargetsForEnumerator(maybeParent) }
+
+      case ScalaTokenTypes.kTHIS =>
+        val maybeResult = maybeParent.flatMap {
+          case self: ScSelfInvocation => self.bind
+          case _ => None
+        }
+
+        maybeResult match {
+          case Some(result) => Array(result)
+          case _ => null
+        }
+
+      case ScalaTokenTypes.kIF =>
+        getGotoDeclarationTargetsForEnumerator(maybeParent)
+
+      case ScalaTokenTypes.tCHOOSE =>
+        getGotoDeclarationTargetsForEnumerator(maybeParent)
+
+      case ScalaTokenTypes.tIDENTIFIER =>
+        val reference = containingFile.findReferenceAt(sourceElement.getTextRange.getStartOffset)
+        if (reference == null)
+          return null
+        getGotoDeclarationTargetsForElement(reference, maybeParent)
+        
+      case _ =>
+        null
     }
   }
+
+  @Measure
+  private def findTargetElementsByTasty(project: Project, sourceElement: PsiElement, caretOffset: Int): Option[PsiElement] =
+    sourceElement.getNode.getElementType match {
+      case ScalaTokenTypes.tIDENTIFIER =>
+        for {
+          (file, offset) <- referenceTargetsAt(sourceElement, caretOffset).headOption
+          virtualFile <- Option(VfsUtil.findFileByIoFile(new File(project.getBasePath, file), false))
+          psiFile <- Option(PsiManager.getInstance(project).findFile(virtualFile))
+          targetElement <- Option(psiFile.findElementAt(offset))
+        } yield {
+          showTastyNotification("Navigation") // Internal mode
+          targetElement
+        }
+      case _ =>
+        None
+    }
 
   private def regularCase(result: ScalaResolveResult): Seq[PsiElement] = {
     val actualElement = result.getActualElement

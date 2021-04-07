@@ -6,7 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.JavaSdkVersion
 import org.jetbrains.jps.api.GlobalOptions
 import org.jetbrains.plugins.scala.compiler.data.SbtData
-import org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode
+import org.jetbrains.plugins.scala.compilerBasedHighlighting.ScalaHighlightingMode
 import org.jetbrains.plugins.scala.util.JvmOptions
 
 import scala.jdk.CollectionConverters._

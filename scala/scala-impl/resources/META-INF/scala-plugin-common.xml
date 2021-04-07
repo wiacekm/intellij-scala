@@ -26,7 +26,7 @@
         <extensionPoint name="importUsedProvider" interface="org.jetbrains.plugins.scala.editor.importOptimizer.ImportInfoProvider" dynamic="true"/>
         <extensionPoint name="importOptimizerHelper" interface="org.jetbrains.plugins.scala.editor.importOptimizer.ScalaImportOptimizerHelper" dynamic="true"/>
         <extensionPoint name="referenceExtraResolver" interface="org.jetbrains.plugins.scala.lang.psi.impl.base.ScStableCodeReferenceExtraResolver" dynamic="true"/>
-        <extensionPoint name="worksheetCompiler" interface="org.jetbrains.plugins.scala.externalHighlighters.compiler.WorksheetHighlightingCompiler" dynamic="true"/>
+        <extensionPoint name="worksheetCompiler" interface="org.jetbrains.plugins.scala.compilerBasedHighlighting.compiler.WorksheetHighlightingCompiler" dynamic="true"/>
         <extensionPoint name="compilerSettingsProfileProvider" interface="org.jetbrains.plugins.scala.codeInspection.feature.ScalaCompilerSettingsProfileProvider" dynamic="true"/>
     </extensionPoints>
 
@@ -69,7 +69,7 @@
                    implementationClass="org.jetbrains.plugins.scala.highlighter.ScalaColorSchemeAnnotator"/>
         <statusBarWidgetFactory implementation="org.jetbrains.plugins.scala.components.TypeAwareWidgetFactory"/>
 
-        <trafficLightRendererContributor implementation="org.jetbrains.plugins.scala.externalHighlighters.CustomTrafficLightRendererContributor"/>
+        <trafficLightRendererContributor implementation="org.jetbrains.plugins.scala.compilerBasedHighlighting.CustomTrafficLightRendererContributor"/>
 
         <defaultHighlightingSettingProvider implementation="org.jetbrains.plugins.scala.annotator.ScalaDefaultHighlightingSettingProvider"/>
 
@@ -483,7 +483,7 @@
 
         <compiler.task execute="BEFORE" implementation="org.jetbrains.plugins.scala.lang.formatting.ReformatOnCompileTask"/>
         <compiler.task execute="BEFORE" implementation="org.jetbrains.plugins.scala.compiler.EnsureModulesHaveDifferentProdAndTestOutputsTask"/>
-        <compiler.task execute="BEFORE" implementation="org.jetbrains.plugins.scala.externalHighlighters.EraseCompilerProcessJdkOnce"/>
+        <compiler.task execute="BEFORE" implementation="org.jetbrains.plugins.scala.compilerBasedHighlighting.EraseCompilerProcessJdkOnce"/>
 
         <applicationService serviceInterface="org.jetbrains.plugins.scala.compiler.ScalaCompileServerSettings"
                             serviceImplementation="org.jetbrains.plugins.scala.compiler.ScalaCompileServerSettings"/>
@@ -513,8 +513,8 @@
         <projectService serviceImplementation="org.jetbrains.plugins.scala.testDiscovery.ScalaAffectedTestsInChangeListPainter"/>
         <projectService serviceImplementation="org.jetbrains.plugins.scala.externalLibraries.bm4.BetterMonadicForSupport"/>
         <projectService serviceImplementation="org.jetbrains.plugins.scala.externalLibraries.kindProjector.KindProjectorUtil"/>
-        <projectService serviceInterface="org.jetbrains.plugins.scala.externalHighlighters.CompilerLock"
-                        serviceImplementation="org.jetbrains.plugins.scala.externalHighlighters.CompilerLockImpl"/>
+        <projectService serviceInterface="org.jetbrains.plugins.scala.compilerBasedHighlighting.CompilerLock"
+                        serviceImplementation="org.jetbrains.plugins.scala.compilerBasedHighlighting.CompilerLockImpl"/>
         <projectService serviceImplementation="scala.meta.intellij.MetaExpansionsManager"/>
         <projectService serviceInterface="org.jetbrains.plugins.scala.settings.ScalaProjectSettings"
                         serviceImplementation="org.jetbrains.plugins.scala.settings.ScalaProjectSettings"/>
@@ -1749,7 +1749,7 @@
         <postStartupActivity implementation="org.jetbrains.plugins.scala.components.ScalaPluginVersionVerifierActivity"/>
         <postStartupActivity implementation="org.jetbrains.plugins.scala.findUsages.compilerReferences.compilation.SbtCompilationSupervisor$Activity"/>
 
-        <editorFactoryListener implementation="org.jetbrains.plugins.scala.externalHighlighters.HighlightCreatedEditorListener"/>
+        <editorFactoryListener implementation="org.jetbrains.plugins.scala.compilerBasedHighlighting.HighlightCreatedEditorListener"/>
 
         <resolveScopeProvider implementation="org.jetbrains.plugins.scala.lang.psi.impl.ScalaOutOfSourcesResolveScopeProvider"/>
 
@@ -1767,18 +1767,18 @@
         <listener topic="com.intellij.compiler.server.BuildManagerListener"
                   class="org.jetbrains.plugins.scala.compiler.CompileServerLauncher$Listener"/>
         <listener topic="com.intellij.openapi.project.ProjectManagerListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.ToggleHighlightingModeListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.ToggleHighlightingModeListener"/>
         <listener topic="com.intellij.openapi.project.ProjectManagerListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.TriggerCompilerHighlightingOnProjectOpenedListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.TriggerCompilerHighlightingOnProjectOpenedListener"/>
         <listener topic="com.intellij.openapi.project.ProjectManagerListener"
                   class="org.jetbrains.plugins.scala.components.Scala3Disclaimer$ProjectListener"/>
 
         <listener topic="com.intellij.compiler.server.BuildManagerListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.CompilerLockBuildManagerListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.CompilerLockBuildManagerListener"/>
         <listener topic="com.intellij.compiler.server.BuildManagerListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.DropProjectDataChangesBuildManagerListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.DropProjectDataChangesBuildManagerListener"/>
         <listener topic="com.intellij.openapi.project.ProjectManagerListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.TriggerCompilerHighlightingOnPsiChangeListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.TriggerCompilerHighlightingOnPsiChangeListener"/>
 
         <listener topic="com.intellij.compiler.server.BuildManagerListener"
                   class="org.jetbrains.plugins.scala.compilationCharts.CompilationChartsBuildManagerListener"/>
@@ -1805,7 +1805,7 @@
                   class="org.jetbrains.plugins.scala.compiler.CompilerEventFromCustomBuilderMessageListener"/>
 
         <listener topic="org.jetbrains.plugins.scala.compiler.CompilerEventListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.UpdateCompilerGeneratedStateListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.UpdateCompilerGeneratedStateListener"/>
 
         <listener topic="com.intellij.execution.ExecutionListener"
                   class="org.jetbrains.plugins.scala.runner.SyncOutputExecutionListener"/>
@@ -1817,7 +1817,7 @@
                   class="org.jetbrains.plugins.scala.compilationCharts.UpdateCompilationProgressListener"/>
 
         <listener topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"
-                  class="org.jetbrains.plugins.scala.externalHighlighters.TriggerCompilerHighlightingOnEditorSelectionChangedListener"/>
+                  class="org.jetbrains.plugins.scala.compilerBasedHighlighting.TriggerCompilerHighlightingOnEditorSelectionChangedListener"/>
     </projectListeners>
     <actions>
         <action id="Scala.NewClass" class="org.jetbrains.plugins.scala.actions.NewScalaTypeDefinitionAction">
@@ -1880,6 +1880,10 @@
             <keyboard-shortcut first-keystroke="alt EQUALS" keymap="Mac OS X 10.5+" remove="true"/>
             <add-to-group group-id="CodeEditorViewGroup" anchor="before" relative-to-action="Scala.ShowImplicits"/>
         </action>
+        <action id="Scala.CompareReferencesWithTastyAction" class="org.jetbrains.plugins.scala.tasty.compare.CompareReferencesWithTastyAction" internal="true">
+        </action>
+        <action id="Scala.EraseCompareReferencesWithTastyAction" class="org.jetbrains.plugins.scala.tasty.compare.EraseCompareReferencesWithTastyAction" internal="true">
+        </action>
         <action id="Scala.GenerateScaladoc" class="org.jetbrains.plugins.scala.lang.scaladoc.generate.ScaladocAction">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
@@ -1909,5 +1913,6 @@
         <action id="Scala.EditPackagePrefix" class="org.jetbrains.plugins.scala.actions.EditPackagePrefixAction">
             <add-to-group group-id="ProjectViewPopupMenuSettingsGroup" relative-to-action="MarkRootGroup" anchor="after"/>
         </action>
+
     </actions>
 </idea-plugin>

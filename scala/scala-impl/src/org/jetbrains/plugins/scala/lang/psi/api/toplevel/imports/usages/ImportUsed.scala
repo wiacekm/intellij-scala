@@ -10,7 +10,7 @@ package usages
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.{PsiAnchor, PsiElement}
 import org.jetbrains.plugins.scala.extensions.{ObjectExt, ifReadAllowed}
-import org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode
+import org.jetbrains.plugins.scala.compilerBasedHighlighting.ScalaHighlightingMode
 import org.jetbrains.plugins.scala.lang.formatting.settings.ScalaCodeStyleSettings
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScObject
 import org.jetbrains.plugins.scala.project.ProjectPsiElementExt

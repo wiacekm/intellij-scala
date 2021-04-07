@@ -8,7 +8,7 @@ import com.intellij.lang.PsiBuilder
 import com.intellij.lang.impl.PsiBuilderAdapter
 import com.intellij.openapi.util.text.StringUtil.isWhiteSpace
 import com.intellij.psi.impl.source.resolve.FileContextUtil.CONTAINING_FILE_KEY
-import org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode
+import org.jetbrains.plugins.scala.compilerBasedHighlighting.ScalaHighlightingMode
 import org.jetbrains.plugins.scala.lang.lexer.ScalaTokenType
 
 // TODO: now isScala3 is properly set only in org.jetbrains.plugins.scala.lang.parser.ScalaParser
@@ -122,7 +122,7 @@ class ScalaPsiBuilderImpl(delegate: PsiBuilder, override val isScala3: Boolean) 
    * Note: if external highlighting in Scala3 is enabled parser errors are not shown
    *
    * @see [[org.jetbrains.plugins.scala.codeInsight.highlighting.ScalaHighlightErrorFilter]]
-   * @see [[org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode.showParserErrors]]
+   * @see [[org.jetbrains.plugins.scala.compilerBasedHighlighting.ScalaHighlightingMode.showParserErrors]]
    */
   override def error(messageText: String): Unit =
     super.error(messageText)

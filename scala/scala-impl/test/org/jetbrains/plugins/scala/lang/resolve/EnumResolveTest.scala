@@ -2,7 +2,7 @@ package org.jetbrains.plugins.scala.lang.resolve
 import com.intellij.openapi.util.registry.Registry
 import org.jetbrains.plugins.scala.{LatestScalaVersions, ScalaVersion}
 import org.jetbrains.plugins.scala.base.ScalaLightCodeInsightFixtureTestAdapter
-import org.jetbrains.plugins.scala.externalHighlighters.ScalaHighlightingMode.ShowDotcErrorsKey
+import org.jetbrains.plugins.scala.compilerBasedHighlighting.ScalaHighlightingMode.ShowDotcErrorsKey
 
 class EnumResolveTest extends ScalaLightCodeInsightFixtureTestAdapter with SimpleResolveTestBase {
   import SimpleResolveTestBase._
