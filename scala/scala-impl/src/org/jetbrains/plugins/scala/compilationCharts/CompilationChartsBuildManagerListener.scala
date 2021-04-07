@@ -29,9 +29,6 @@ class CompilationChartsBuildManagerListener
     true
   }
 
-  override def buildStarted(project: Project, sessionId: UUID, isAutomake: Boolean): Unit = {
-  }
-
   override def buildFinished(project: Project, sessionId: UUID, isAutomake: Boolean): Unit =
     CompilationChartsUpdater.get(project).stopScheduling()
 }
@@ -66,5 +63,5 @@ private final class CompilationChartsUpdater(project: Project)
 private object CompilationChartsUpdater {
 
   def get(project: Project): CompilationChartsUpdater =
-    ServiceManager.getService(project, classOf[CompilationChartsUpdater])
+    project.getService(classOf[CompilationChartsUpdater])
 }
