@@ -144,7 +144,7 @@ private[importing] object BspResolverLogic {
           val sharedGeneratedSourcesForIds = sharedGeneratedSources.filterKeys(ids.contains)
           (
             sharedGeneratedSources.filterKeys(!sharedGeneratedSourcesForIds.keySet.contains(_)),
-            result + (ids.sortBy(_.getUri).toSeq -> sharedGeneratedSourcesForIds.values.flatten.toSeq)
+            result + (ids.sortBy(_.getUri) -> sharedGeneratedSourcesForIds.values.flatten.toSeq)
           )
       }._2
 
@@ -156,17 +156,33 @@ private[importing] object BspResolverLogic {
       .map { case (targetIds, sources) =>
         val targets = targetIds.map(idToTarget)
         val sharingModules = targetIds.map(idToModule)
+        // ugh this makes the calculation quadratic ⬇
         val resources = targetIdsResources.find(_._1.diff(targetIds).isEmpty).toSeq.flatMap(_._2)
-        val genSources = idsGeneratedSources.get(targetIds.toSeq).toSeq.flatten
+        val genSources = idsGeneratedSources.get(targetIds).toSeq.flatten
         createSyntheticModuleDescription(targets, resources, sources, genSources, sharingModules)
       }
+
+    val mappedResourceDirs = syntheticSourceModules.flatMap(_.data.resourceDirs).toSet
+    val syntheticResourceModules = sharedResources.toSeq
+      .filterNot { case (dir, _) => mappedResourceDirs.contains(dir) }
+      .groupBy(_._2.sortBy(_.getUri))
+      .view
+      .mapValues(_.map(_._1))
+      .toSeq
+      .map { case (targetIds, resources) =>
+        val targets = targetIds.map(idToTarget)
+        val sharingModules = targetIds.map(idToModule)
+        createSyntheticModuleDescription(targets, resources, Nil, Nil, sharingModules)
+      }
+
+    val syntheticModules = syntheticSourceModules ++ syntheticResourceModules
 
     // merge modules with the same module base
     val (noBase, withBase) = moduleDescriptions.partition(_.data.basePath.isEmpty)
     val mergedBase = withBase.groupBy(_.data.basePath).values.map(mergeModules)
     val modules = noBase ++ mergedBase
 
-    ProjectModules(modules, syntheticSourceModules)
+    ProjectModules(modules, syntheticModules)
   }
 
   private def sharedSourceDirs(idToSources: Map[BuildTargetIdentifier, Seq[SourceDirectory]]): Map[SourceDirectory, Seq[BuildTargetIdentifier]] = {
