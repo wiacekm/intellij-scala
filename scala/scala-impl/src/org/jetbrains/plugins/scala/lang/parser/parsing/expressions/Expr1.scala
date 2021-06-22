@@ -25,7 +25,7 @@ import org.jetbrains.plugins.scala.lang.parser.util.{InScala3, ParserUtils}
  *         | 'do' Expr [semi] 'while' '(' Expr ')'
  *         | 'for' ('(' Enumerators ')' | '{' Enumerators '}') {nl} ['yield'] Expr
  *         | 'throw' Expr
- * 
+ *
  *         | implicit Id => Expr  # Not in Scala Specification yet!
  *
  *         | 'return' [Expr]
@@ -342,8 +342,6 @@ object Expr1 extends ParsingRule {
     val iw = builder.currentIndentationWidth
     builder.advanceLexer() //Ate if
     builder.getTokenType match {
-      case InScala3(_) if parseParenlessIfCondition() =>
-        // already parsed everything till after 'then'
       case ScalaTokenTypes.tLPARENTHESIS =>
         builder.advanceLexer() //Ate (
         builder.disableNewlines()
@@ -351,10 +349,13 @@ object Expr1 extends ParsingRule {
         builder.getTokenType match {
           case ScalaTokenTypes.tRPARENTHESIS =>
             builder.advanceLexer() //Ate )
+            if (builder.getTokenType == ScalaTokenType.ThenKeyword) builder.advanceLexer()
           case _ =>
             builder error ErrMsg("rparenthesis.expected")
         }
         builder.restoreNewlinesState()
+      case InScala3(_) if parseParenlessIfCondition() =>
+      // already parsed everything till after 'then'
       case _ =>
         builder error ErrMsg("condition.expected")
     }
@@ -383,24 +384,18 @@ object Expr1 extends ParsingRule {
   }
 
   def parseParenlessIfCondition()(implicit builder: ScalaPsiBuilder): Boolean = {
-    val startedWithLParen = builder.getTokenType == ScalaTokenTypes.tLPARENTHESIS
-    val rollbackMarker = builder.mark()
-    val success = ExprInIndentationRegion() && (
-      if (builder.getTokenType == ScalaTokenType.ThenKeyword) {
-        builder.advanceLexer()
-        true
-      } else if (startedWithLParen) {
-        false
-      } else {
-        builder error ErrMsg("expected.then")
-        true
-      }
-    )
+    val rollbackMarker  = builder.mark()
+    val cond = ExprInIndentationRegion()
 
-    if (success) rollbackMarker.drop()
-    else rollbackMarker.rollbackTo()
-
-    success
+    if (!cond) {
+      rollbackMarker.rollbackTo()
+      false
+    } else {
+      if (builder.getTokenType != ScalaTokenType.ThenKeyword) builder.error(ScalaBundle.message("expected.then"))
+      else                                                    builder.advanceLexer()
+      rollbackMarker.drop()
+      true
+    }
   }
 
   def parseMatch(exprMarker: PsiBuilder.Marker)(implicit builder: ScalaPsiBuilder): Unit = {
