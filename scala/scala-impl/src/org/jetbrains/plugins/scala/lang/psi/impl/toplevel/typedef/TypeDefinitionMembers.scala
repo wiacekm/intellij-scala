@@ -81,15 +81,15 @@ object TypeDefinitionMembers {
     }
   }
 
-  def getStableSignatures(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): StableNodes.Map = {
+  def getStableSignatures(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): StableNodes.Map = {
     ScalaPsiManager.instance(tp.projectContext).getStableSignatures(tp, compoundTypeThisType)
   }
 
-  def getTypes(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): TypeNodes.Map = {
+  def getTypes(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): TypeNodes.Map = {
     ScalaPsiManager.instance(tp.projectContext).getTypes(tp, compoundTypeThisType)
   }
 
-  def getSignatures(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): TermNodes.Map = {
+  def getSignatures(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): TermNodes.Map = {
     ScalaPsiManager.instance(tp.projectContext).getSignatures(tp, compoundTypeThisType)
   }
 
@@ -204,7 +204,7 @@ object TypeDefinitionMembers {
     true
   }
 
-  def processDeclarations(comp: ScCompoundType,
+  def processDeclarations(comp: ScCompoundOrAndType,
                           processor: PsiScopeProcessor,
                           state: ResolveState,
                           lastParent: PsiElement,
@@ -235,7 +235,7 @@ object TypeDefinitionMembers {
     def apply(c: PsiClass): SignatureMapsProvider =
       new ClassSignatures(c, withSupers = true)
 
-    def apply(comp: ScCompoundType, compoundTypeThisType: Option[ScType]): SignatureMapsProvider =
+    def apply(comp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): SignatureMapsProvider =
       new CompoundTypeSignatures(comp, compoundTypeThisType)
 
     private class ClassSignatures(c: PsiClass, withSupers: Boolean) extends SignatureMapsProvider {
@@ -249,7 +249,7 @@ object TypeDefinitionMembers {
     }
 
 
-    private class CompoundTypeSignatures(ct: ScCompoundType, compoundTypeThisType: Option[ScType]) extends SignatureMapsProvider {
+    private class CompoundTypeSignatures(ct: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]) extends SignatureMapsProvider {
       override def allSignatures: MixinNodes.Map[TermSignature] = getSignatures(ct, compoundTypeThisType)
 
       override def stable: MixinNodes.Map[TermSignature] = getStableSignatures(ct, compoundTypeThisType)

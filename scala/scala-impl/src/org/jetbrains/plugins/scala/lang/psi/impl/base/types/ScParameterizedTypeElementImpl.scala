@@ -16,7 +16,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScTypeParametersOwner
 import org.jetbrains.plugins.scala.lang.psi.impl.ScalaPsiElementFactory.createTypeElementFromText
 import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.synthetic.ScSyntheticClass
 import org.jetbrains.plugins.scala.lang.psi.types._
-import org.jetbrains.plugins.scala.lang.psi.types.api.Any
+import org.jetbrains.plugins.scala.lang.psi.types.api.{Any, ExtractClass}
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.lang.psi.types.result._
 import org.jetbrains.plugins.scala.lang.resolve.ScalaResolveResult
@@ -29,9 +29,9 @@ import scala.annotation.tailrec
  */
 
 class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(node) with ScParameterizedTypeElement {
-  override def desugarizedText: String = {
-    val inlineSyntaxIds = Set("?", "+?", "-?", "*", "+*", "-*")
+  import ScParameterizedTypeElementImpl._
 
+  override def desugarizedText: String = {
     def kindProjectorFunctionSyntax(elem: ScTypeElement): String = {
       def convertParameterized(param: ScParameterizedTypeElement): String = {
         param.typeElement.getText match {
@@ -116,12 +116,11 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
     }
 
     val kindProjectorEnabled = this.kindProjectorPluginEnabled
-    def isKindProjectorFunctionSyntax(element: PsiElement): Boolean = {
-      typeElement.getText match {
+    def isKindProjectorFunctionSyntax(te: PsiElement): Boolean =
+      te.getText match {
         case "Lambda" | "λ" if kindProjectorEnabled => true
-        case _ => false
+        case _                                      => false
       }
-    }
 
     @tailrec
     def isKindProjectorInlineSyntax(element: PsiElement): Boolean = {
@@ -188,11 +187,22 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
       case _ =>
     }
 
-    typeArgList.typeArgs match {
-      case Seq() => tr
-      case args =>
-        val result = ScParameterizedType(res, args.map(_.`type`().getOrAny))
-        Right(result)
+    val typeArgs = typeArgList.typeArgs.map(_.`type`().getOrAny)
+
+    tr match {
+      case Right(ExtractClass(cls)) if andOrOrTypeDesignator.contains(cls.getQualifiedName) =>
+        val des = cls.getQualifiedName
+        if (typeArgs.size != 2) Right(Any)
+        else {
+          val tpe =
+            if (des == "scala.&") ScAndType(typeArgs(0), typeArgs(1))
+            else                  ScOrType(typeArgs(0), typeArgs(1))
+
+          Right(tpe)
+        }
+      case _ =>
+        if (typeArgs.isEmpty) tr
+        else                  Right(ScParameterizedType(res, typeArgs))
     }
   }
 
@@ -244,4 +254,9 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
     }
     super.processDeclarations(processor, state, lastParent, place)
   }
+}
+
+object ScParameterizedTypeElementImpl {
+  private[ScParameterizedTypeElementImpl] val inlineSyntaxIds       = Set("?", "+?", "-?", "*", "+*", "-*")
+  private[ScParameterizedTypeElementImpl] val andOrOrTypeDesignator = Set("scala.&", "scala.|")
 }

@@ -8,8 +8,6 @@ package impl
 package toplevel
 package typedef
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.{List => JList}
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.psi.{PsiClass, PsiClassType, PsiNamedElement}
 import com.intellij.util.containers.{ContainerUtil, SmartHashSet}
@@ -19,12 +17,12 @@ import org.jetbrains.plugins.scala.caches.ModTracker
 import org.jetbrains.plugins.scala.extensions._
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScNewTemplateDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScTypeAliasDefinition
-import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.{ScGivenDefinition, ScObject, ScTemplateDefinition, ScTrait, ScTypeDefinition}
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.{ScObject, ScTemplateDefinition, ScTrait, ScTypeDefinition}
 import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.synthetic.ScSyntheticClass
 import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.typedef.MixinNodes.SuperTypesData
 import org.jetbrains.plugins.scala.lang.psi.types._
 import org.jetbrains.plugins.scala.lang.psi.types.api.designator.{ScDesignatorType, ScProjectionType, ScThisType}
-import org.jetbrains.plugins.scala.lang.psi.types.api.{ParameterizedType, TypeParameterType}
+import org.jetbrains.plugins.scala.lang.psi.types.api.{ExtractClass, ParameterizedType, TypeParameterType}
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.ScTypePolymorphicType
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.lang.refactoring.util.ScalaNamesUtil
@@ -32,9 +30,11 @@ import org.jetbrains.plugins.scala.macroAnnotations.{CachedInUserData, CachedWit
 import org.jetbrains.plugins.scala.project.ProjectContext
 import org.jetbrains.plugins.scala.util.ScEquivalenceUtil
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.{List => JList}
 import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.collection.immutable.{ArraySeq, SeqMap}
+import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 abstract class MixinNodes[T <: Signature](signatureCollector: SignatureProcessor[T]) {
@@ -56,10 +56,14 @@ abstract class MixinNodes[T <: Signature](signatureCollector: SignatureProcessor
     }
   }
 
-  def build(cp: ScCompoundType, compoundThisType: Option[ScType] = None): Map = {
+  def build(cp: ScCompoundOrAndType, compoundThisType: Option[ScType] = None): Map = {
     val map = new Map
 
-    signatureCollector.processRefinement(cp, map)
+    cp match {
+      case comp: ScCompoundType => signatureCollector.processRefinement(comp, map)
+      case _                    => ()
+    }
+
     map.thisFinished()
 
     addSuperSignatures(SuperTypesData(cp, compoundThisType), map)
@@ -98,8 +102,8 @@ object MixinNodes {
       SuperTypesData(superTypes, thisTypeSubst)
     }
 
-    def apply(cp: ScCompoundType, compoundThisType: Option[ScType]): SuperTypesData = {
-      val superTypes = MixinNodes.linearization(cp)
+    def apply(cp: ScCompoundOrAndType, compoundThisType: Option[ScType]): SuperTypesData = {
+      val superTypes    = MixinNodes.linearization(cp)
       val thisTypeSubst = ScSubstitutor(compoundThisType.getOrElse(cp))
       SuperTypesData(superTypes, thisTypeSubst)
     }
@@ -112,9 +116,9 @@ object MixinNodes {
         superType.extractClassType match {
           case Some((superClass, s)) =>
             val dependentSubst = superType match {
-              case p@ScProjectionType(proj, _) => ScSubstitutor(proj).followed(p.actualSubst)
-              case ParameterizedType(p@ScProjectionType(proj, _), _) => ScSubstitutor(proj).followed(p.actualSubst)
-              case _ => ScSubstitutor.empty
+              case p @ ScProjectionType(proj, _)                       => ScSubstitutor(proj).followed(p.actualSubst)
+              case ParameterizedType(p @ ScProjectionType(proj, _), _) => ScSubstitutor(proj).followed(p.actualSubst)
+              case _                                                   => ScSubstitutor.empty
             }
             val newSubst = combine(s, superClass).followed(thisTypeSubst).followed(dependentSubst)
             substitutorsBuilder += superClass -> newSubst
@@ -129,12 +133,11 @@ object MixinNodes {
       SuperTypesData(substitutorsBuilder.result(), refinementsBuilder.result())
     }
 
-    private def combine(superSubst: ScSubstitutor, superClass : PsiClass): ScSubstitutor = {
+    private def combine(superSubst: ScSubstitutor, superClass: PsiClass): ScSubstitutor = {
       val typeParameters = superClass.getTypeParameters
       val substedTpts = typeParameters.map(tp => superSubst(TypeParameterType(tp)))
       ScSubstitutor.bind(typeParameters, substedTpts)
     }
-
   }
 
   def allSuperClasses(clazz: PsiClass): Set[PsiClass] =
@@ -386,8 +389,9 @@ object MixinNodes {
 
           val classType = clazz match {
             case td: ScTypeDefinition => td.`type`().getOrElse(default)
-            case _ => default
+            case _                    => default
           }
+
           val supers: Seq[ScType] = {
             clazz match {
               case td: ScTemplateDefinition => td.superTypes
@@ -411,43 +415,42 @@ object MixinNodes {
     res
   }
 
-
-  def linearization(compound: ScCompoundType, addTp: Boolean = false): Seq[ScType] = {
-    val comps = compound.components
-    val classType = if (addTp) Some(compound) else None
+  def linearization(compound: ScCompoundOrAndType, addTp: Boolean = false): Seq[ScType] = {
+    val comps     = compound.components
+    val classType = Option.when(addTp)(compound)
     generalLinearization(classType, comps)
   }
 
-
   private def generalLinearization(classType: Option[ScType], supers: Iterable[ScType]): Seq[ScType] = {
-    val buffer = mutable.ArrayBuffer.empty[ScType]
-    val set: mutable.HashSet[String] = new mutable.HashSet //to add here qualified names of classes
-    def classString(clazz: PsiClass): String = {
+    val baseTypes      = mutable.ArrayBuffer.empty[ScType]
+    val qualifiedNames = mutable.HashSet.empty[String]
+
+    def classString(clazz: PsiClass): String =
       clazz match {
         case obj: ScObject => "Object: " + obj.qualifiedName
-        case tra: ScTrait => "Trait: " + tra.qualifiedName
-        case _ => "Class: " + clazz.qualifiedName
+        case tra: ScTrait  => "Trait: " + tra.qualifiedName
+        case _             => "Class: " + clazz.qualifiedName
       }
-    }
+
     def add(tp: ScType): Unit = {
       extractClassOrUpperBoundClass(tp) match {
-        case Some((clazz, _)) if clazz.qualifiedName != null && !set.contains(classString(clazz)) =>
-          tp +=: buffer
-          set += classString(clazz)
+        case Some((clazz, _)) if clazz.qualifiedName != null && !qualifiedNames.contains(classString(clazz)) =>
+          tp +=: baseTypes
+          qualifiedNames += classString(clazz)
         case Some((clazz, _)) if clazz.getTypeParameters.nonEmpty =>
-          val i = buffer.indexWhere(_.extractClass match {
-            case Some(newClazz) if ScEquivalenceUtil.areClassesEquivalent(newClazz, clazz) => true
-            case _ => false
+          val idx = baseTypes.indexWhere {
+            case ExtractClass(cls) if ScEquivalenceUtil.areClassesEquivalent(cls, clazz) => true
+            case _                                                                       => false
           }
-          )
-          if (i != -1) {
-            val newTp = buffer(i)
-            if (tp.conforms(newTp)) buffer.update(i, tp)
+
+          if (idx != -1) {
+            val newTp = baseTypes(idx)
+            if (tp.conforms(newTp)) baseTypes.update(idx, tp)
           }
         case _ =>
           dealias(tp) match {
-            case c: ScCompoundType => c +=: buffer
-            case _ =>
+            case c: ScCompoundType => c +=: baseTypes
+            case _                 =>
           }
       }
     }
@@ -455,6 +458,7 @@ object MixinNodes {
     val iterator = supers.iterator
     while (iterator.hasNext) {
       var tp = iterator.next()
+
       @tailrec
       def updateTp(tp: ScType, depth: Int = 0): ScType = {
         tp match {
@@ -469,20 +473,23 @@ object MixinNodes {
             }
         }
       }
+
       tp = updateTp(tp)
       extractClassOrUpperBoundClass(tp) match {
         case Some((clazz, subst)) =>
-          val lin = linearization(clazz)
+          val lin         = linearization(clazz)
           val newIterator = lin.reverseIterator
+
           while (newIterator.hasNext) {
             val tp = newIterator.next()
             add(subst(tp))
           }
         case _ =>
           dealias(tp) match {
-            case c: ScCompoundType =>
-              val lin = linearization(c, addTp = true)
+            case c: ScCompoundOrAndType =>
+              val lin         = linearization(c, addTp = true)
               val newIterator = lin.reverseIterator
+
               while (newIterator.hasNext) {
                 val tp = newIterator.next()
                 add(tp)
@@ -493,7 +500,7 @@ object MixinNodes {
       }
     }
     classType.foreach(add)
-    buffer.to(ArraySeq)
+    baseTypes.to(ArraySeq)
   }
 
   private def dealias(tp: ScType) = tp match {

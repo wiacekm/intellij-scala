@@ -41,4 +41,8 @@ trait ScalaTypeVisitor {
   def visitAbstractType(a: ScAbstractType): Unit = {}
 
   def visitTypePolymorphicType(t: ScTypePolymorphicType): Unit = {}
+
+  def visiOrType(t: ScOrType): Unit = {}
+
+  def visitAndType(t: ScAndType): Unit = {}
 }
