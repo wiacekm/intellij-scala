@@ -2,35 +2,14 @@ package org.jetbrains.plugins.scala
 package highlighter
 package usages
 
-import com.intellij.codeInsight.highlighting.HighlightUsagesHandler
-import com.intellij.openapi.util.TextRange
-import org.jetbrains.plugins.scala.base.ScalaLightCodeInsightFixtureTestAdapter
-import org.jetbrains.plugins.scala.extensions.StringExt
-import org.jetbrains.plugins.scala.util.Markers
-
-class ScalaHighlightConstructorInvocationUsagesTest extends ScalaLightCodeInsightFixtureTestAdapter with AssertionMatchers with Markers {
-  val | = CARET
-  val |< = startMarker
-  val >| = endMarker
+class ScalaHighlightConstructorInvocationUsagesTest extends ScalaHighlightingUsagesTestBase {
 
   def testClassDefinitionUsage(): Unit = {
     val code =
       s"""
          |object Obj {
-         |  class ${|<}Te${|}st${>|}
-         |  val x: ${|<}Test${>|} = new ${|<}Test${>|}
-         |}
-       """.stripMargin
-    doTest(code)
-  }
-
-  def testClassConstructorInvocationUsage(): Unit = {
-    val code =
-      s"""
-         |object Obj {
          |  class ${|<}Test${>|}
-         |  val x: ${|<}Test${>|} = new ${|<}Te${|}st${>|}
-         |  new ${|<}Test${>|}
+         |  val x: ${|<}Test${>|} = new ${|<}Test${>|}
          |}
        """.stripMargin
     doTest(code)
@@ -39,38 +18,26 @@ class ScalaHighlightConstructorInvocationUsagesTest extends ScalaLightCodeInsigh
   def testAuxiliaryConstructorUsage(): Unit = {
     val code =
       s"""
-         |obejct Obj {
+         |object Obj {
          |  class ${|<}Test${>|} {
          |    def ${|<}this${>|}(i: Int) = this()
          |  }
          |  val x: ${|<}Test${>|} = new ${|<}Te${|}st${>|}(3)
          |  new ${|<}Test${>|}
          |}
-         |""".stripMargin
+       """.stripMargin
     doTest(code)
   }
 
-  def testAuxiliaryConstructorInvoctionUsage(): Unit = {
+  def testAuxiliaryConstructorInvocationUsage(): Unit = {
     val code =
       s"""
-         |obejct Obj {
+         |object Obj {
          |  class Test {
          |    def ${|<}th${|}is${>|}(i: Int) = this()
          |  }
          |  val x: Test = new ${|<}Test${>|}(3)
          |  new Test
-         |}
-         |""".stripMargin
-    doTest(code)
-  }
-
-  def testClassTypeAnnotationUsage(): Unit = {
-    val code =
-      s"""
-         |object Obj {
-         |  class ${|<}Test${>|}
-         |  val x: ${|<}Te${|}st${>|} = new ${|<}Test${>|}
-         |  new ${|<}Test${>|}
          |}
        """.stripMargin
     doTest(code)
@@ -81,34 +48,21 @@ class ScalaHighlightConstructorInvocationUsagesTest extends ScalaLightCodeInsigh
       s"""
          |object Obj {
          |  trait ${|<}Test${>|}
-         |  val x: ${|<}Test${>|} = new ${|<}Te${|}st${>|} {}
+         |  val x: ${|<}Test${>|} = new ${|<}Test${>|} {}
          |  new ${|<}Test${>|} {}
          |}
        """.stripMargin
     doTest(code)
   }
 
-  def doTest(fileText: String): Unit = {
-    val (fileTextWithoutMarkers, expectedRanges) = extractMarker(fileText.withNormalizedSeparator, considerCaret = true)
-    val file = myFixture.configureByText("dummy.scala", fileTextWithoutMarkers)
-    val finalFileText = file.getText
-
-    val editor = myFixture.getEditor
-    HighlightUsagesHandler.invoke(myFixture.getProject, editor, file)
-
-    val highlighters = editor.getMarkupModel.getAllHighlighters
-    val actualRanges = highlighters.map(hr => TextRange.create(hr.getStartOffset, hr.getEndOffset)).toSeq
-
-    val expected = rangeSeqToComparableString(expectedRanges, finalFileText)
-    val actual = rangeSeqToComparableString(actualRanges, finalFileText)
-
-    actual shouldBe expected
-  }
-
-  private def rangeSeqToComparableString(ranges: Seq[TextRange], fileText: String): String =
-    ranges.sortBy(_.getStartOffset).map { range =>
-      val start = range.getStartOffset
-      val end = range.getEndOffset
-      s"($start, $end): " + fileText.substring(start, end)
-    }.mkString("\n")
+  def testCaseClassUsageOn(): Unit = doTest(
+    s"""
+       |object Obj {
+       |  case class ${|<}Test${>|}(i: Int)
+       |
+       |  val t: ${|<}Test${>|} = ${|<}Test${>|}(3)
+       |  new ${|<}Test${>|}(3)
+       |}
+     """.stripMargin
+  )
 }
