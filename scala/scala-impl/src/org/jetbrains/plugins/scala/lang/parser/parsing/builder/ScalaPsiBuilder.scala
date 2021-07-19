@@ -34,6 +34,8 @@ trait ScalaPsiBuilder extends PsiBuilder {
 
   def isSource3Enabled: Boolean
 
+  def kindProjectUnderscorePlaceholdersOptionEnabled: Boolean
+
   def isScala3orSource3: Boolean
 
   def isScala3IndentationBasedSyntaxEnabled: Boolean
