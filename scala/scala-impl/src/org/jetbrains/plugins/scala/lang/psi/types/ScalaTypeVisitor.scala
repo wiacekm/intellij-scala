@@ -42,7 +42,7 @@ trait ScalaTypeVisitor {
 
   def visitTypePolymorphicType(t: ScTypePolymorphicType): Unit = {}
 
-  def visiOrType(t: ScOrType): Unit = {}
+  def visitOrType(t: ScOrType): Unit = {}
 
   def visitAndType(t: ScAndType): Unit = {}
 }

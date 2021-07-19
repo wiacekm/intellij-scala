@@ -70,34 +70,64 @@ class ScalaPsiManager(implicit val project: Project) {
 
   private def dontCacheCompound = ScalaProjectSettings.getInstance(project).isDontCacheCompoundTypes
 
-  def getStableSignatures(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): PMap = {
+  def getStableSignatures(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): PMap = {
     if (dontCacheCompound) StableNodes.build(tp, compoundTypeThisType)
     else getStableSignaturesCached(tp, compoundTypeThisType)
   }
 
   @CachedWithoutModificationCount(valueWrapper = ValueWrapper.SofterReference, clearCacheOnChange)
-  private def getStableSignaturesCached(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): PMap = {
+  private def getStableSignaturesCached(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): PMap = {
     StableNodes.build(tp, compoundTypeThisType)
   }
 
-  def getTypes(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): TMap = {
+  def getTypes(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): TMap = {
     if (dontCacheCompound) TypeNodes.build(tp, compoundTypeThisType)
     else getTypesCached(tp, compoundTypeThisType)
   }
 
   @CachedWithoutModificationCount(ValueWrapper.SofterReference, clearCacheOnChange)
-  private def getTypesCached(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): TMap = {
+  private def getTypesCached(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): TMap = {
     TypeNodes.build(tp, compoundTypeThisType)
   }
 
-  def getSignatures(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): SMap = {
+  def getSignatures(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): SMap = {
     if (dontCacheCompound) return TermNodes.build(tp, compoundTypeThisType)
     getSignaturesCached(tp, compoundTypeThisType)
   }
 
   @CachedWithoutModificationCount(ValueWrapper.SofterReference, clearCacheOnChange)
-  private def getSignaturesCached(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): SMap = {
+  private def getSignaturesCached(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): SMap = {
     TermNodes.build(tp, compoundTypeThisType)
+  }
+
+  def getStableSignatures(tp: ScAndType): PMap = {
+    if (dontCacheCompound) StableNodes.build(tp)
+    else getIntersectionStableSignaturesCached(tp)
+  }
+
+  @CachedWithoutModificationCount(valueWrapper = ValueWrapper.SofterReference, clearCacheOnChange)
+  private def getIntersectionStableSignaturesCached(tp: ScAndType): PMap = {
+    StableNodes.build(tp)
+  }
+
+  def getTypes(tp: ScAndType): TMap = {
+    if (dontCacheCompound) TypeNodes.build(tp)
+    else getIntersectionTypesCached(tp)
+  }
+
+  @CachedWithoutModificationCount(ValueWrapper.SofterReference, clearCacheOnChange)
+  private def getIntersectionTypesCached(tp: ScAndType): TMap = {
+    TypeNodes.build(tp)
+  }
+
+  def getSignatures(tp: ScAndType): SMap = {
+    if (dontCacheCompound) return TermNodes.build(tp)
+    getIntersectionSignaturesCached(tp)
+  }
+
+  @CachedWithoutModificationCount(ValueWrapper.SofterReference, clearCacheOnChange)
+  private def getIntersectionSignaturesCached(tp: ScAndType): SMap = {
+    TermNodes.build(tp)
   }
 
   @CachedWithoutModificationCount(ValueWrapper.SofterReference, clearCacheOnChange)

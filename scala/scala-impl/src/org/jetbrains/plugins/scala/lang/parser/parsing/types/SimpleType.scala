@@ -6,7 +6,6 @@ package types
 
 import com.intellij.lang.PsiBuilder
 import com.intellij.lang.PsiBuilder.Marker
-import org.jetbrains.plugins.scala.ScalaBundle
 import org.jetbrains.plugins.scala.lang.lexer.{ScalaTokenType, ScalaTokenTypes}
 import org.jetbrains.plugins.scala.lang.parser.parsing.builder.ScalaPsiBuilder
 import org.jetbrains.plugins.scala.lang.parser.parsing.expressions.{Literal, Spliced}
@@ -108,6 +107,17 @@ trait SimpleType {
               ScalaTokenTypes.tIDENTIFIER |
               ScalaTokenTypes.kSUPER =>
         val newMarker = builder.mark
+        if (builder.kindProjectUnderscorePlaceholdersOptionEnabled
+            && (builder.getTokenText == "+" || builder.getTokenText == "-")) {
+          builder.advanceLexer()
+          if (builder.getTokenText == "_") {
+            builder.advanceLexer()
+            newMarker.done(ScalaElementType.REFERENCE)
+            simpleMarker.done(ScalaElementType.SIMPLE_TYPE)
+            return true
+          } else newMarker.rollbackTo()
+        }
+
         Path parse(builder, ScalaElementType.REFERENCE)
         builder.getTokenType match {
           case ScalaTokenTypes.tDOT =>
@@ -131,13 +141,13 @@ trait SimpleType {
       case ScalaTokenType.SpliceStart =>
         Spliced.parse(builder, inType = true)
       case _ =>
-        return rollbackCase(builder, simpleMarker)
+        return rollbackCase(simpleMarker)
     }
     parseTail(simpleMarker)
     true
   }
 
-  protected def rollbackCase(builder: ScalaPsiBuilder, simpleMarker: Marker): Boolean = {
+  protected def rollbackCase(simpleMarker: Marker): Boolean = {
     simpleMarker.rollbackTo()
     false
   }

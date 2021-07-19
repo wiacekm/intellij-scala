@@ -29,21 +29,24 @@ object ScAndType {
     case (ParameterizedType(des1, args1), ParameterizedType(des2, args2))
       if checkEquiv(des1, des2) =>
       val jointArgs = extractTypeParameters(des1).flatMap(glbArgs(args1, args2, _))
-      jointArgs.fold()
-      ???
+      jointArgs.fold[ScType](new ScAndType(lhs, rhs))(ScParameterizedType(des1, _))
     case _ => new ScAndType(lhs, rhs)
   }
 
-  private[this] def glbArgs(args1: Seq[ScType], args2: Seq[ScType], typeParams: Seq[TypeParameter]): Option[Seq[ScType]] = {
+  private[this] def glbArgs(
+    args1:      Seq[ScType],
+    args2:      Seq[ScType],
+    typeParams: Seq[TypeParameter]
+  ): Option[Seq[ScType]] = {
     val zippedArgs = args1.lazyZip(args2).lazyZip(typeParams).iterator
-    val jointArgs = Seq.newBuilder[ScType]
+    val jointArgs  = Seq.newBuilder[ScType]
 
     while (zippedArgs.hasNext) {
       val (arg1, arg2, typeParam) = zippedArgs.next()
 
       if (checkEquiv(arg1, arg2))         jointArgs += arg1
-      else if (typeParam.isCovariant)     arg1.glb(arg2)
-      else if (typeParam.isContravariant) arg1.lub(arg2)
+      else if (typeParam.isCovariant)     jointArgs += arg1.glb(arg2)
+      else if (typeParam.isContravariant) jointArgs += arg1.lub(arg2)
       else                                return None
     }
 

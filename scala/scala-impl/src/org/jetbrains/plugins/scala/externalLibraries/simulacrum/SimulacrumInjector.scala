@@ -160,10 +160,7 @@ object SimulacrumInjector {
 
     val retainedTypeParams = prototype.typeParameters.filterNot(typeParamsMappings.isDefinedAt)
 
-    val typeParamsText =
-      if (retainedTypeParams.isEmpty) ""
-      else                            s"[${retainedTypeParams.map(ScalaPsiUtil.typeParamString(_)).mkString("", ", ", "")}]"
-
+    val typeParamsText     = ScalaPsiUtil.typeParamsString(retainedTypeParams)
     val headParams         = prototype.paramClauses.clauses.head.parameters.tail.map(parameterText)
     val restHeadClause     = if (headParams.isEmpty) "" else headParams.mkString("(", ", ", ")")
     val restClauses        = prototype.paramClauses.clauses.tail

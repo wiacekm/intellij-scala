@@ -142,11 +142,7 @@ class CaseClassAndCompanionMembersInjector extends SyntheticMembersInjector {
     if (p.isDefaultParam) " = " + p.getDefaultExpression.fold("{}")(toText("{}")) else ""
 
   private[this] def typeParamsString(tparams: Seq[ScTypeParam]): String =
-    if (tparams.isEmpty) ""
-    else
-      tparams
-        .map(ScalaPsiUtil.typeParamString(_, withContextBounds = false))
-        .mkString("[", ",", "]")
+    ScalaPsiUtil.typeParamsString(tparams, withContextBounds = false)
 
   private def copyMethodText(caseClass: ScClass): Option[String] = {
     caseClass.constructor

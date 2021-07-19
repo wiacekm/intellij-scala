@@ -221,7 +221,7 @@ object ScTemplateDefinitionAnnotator extends ElementAnnotator[ScTemplateDefiniti
   // TODO package private
   def annotateNeedsToBeAbstract(element: ScTemplateDefinition, typeAware: Boolean = true)
                                (implicit holder: ScalaAnnotationHolder): Unit = element match {
-    case _: ScNewTemplateDefinition | _: ScObject =>
+    case _: ScNewTemplateDefinition | _: ScObject | _: ScEnumCase =>
     case _ if !typeAware || isAbstract(element) =>
     case _ =>
       ScalaOIUtil.getMembersToImplement(element, withOwn = true).collectFirst {
@@ -255,7 +255,7 @@ object ScTemplateDefinitionAnnotator extends ElementAnnotator[ScTemplateDefiniti
                             (implicit holder: ScalaAnnotationHolder): Unit = {
     if (element.isInstanceOf[ScTrait]) return
 
-    val nodes = TypeDefinitionMembers.getSignatures(element).allNodesIterator
+    val nodes = TypeDefinitionMembers.getSignatures(element).allNodes
 
     def isOverrideAndAbstract(definition: ScFunctionDefinition) =
       definition.hasModifierPropertyScala(PsiModifier.ABSTRACT) &&

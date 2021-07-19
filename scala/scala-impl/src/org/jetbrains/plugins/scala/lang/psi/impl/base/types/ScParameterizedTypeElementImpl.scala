@@ -11,12 +11,13 @@ import com.intellij.psi.scope.PsiScopeProcessor
 import org.jetbrains.plugins.scala.caches.BlockModificationTracker
 import org.jetbrains.plugins.scala.lang.psi.api.ScalaElementVisitor
 import org.jetbrains.plugins.scala.lang.psi.api.base.types._
-import org.jetbrains.plugins.scala.lang.psi.api.statements.ScTypeAliasDefinition
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScTypeAliasDefinition, ScTypeAlias}
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScTypeParametersOwner
 import org.jetbrains.plugins.scala.lang.psi.impl.ScalaPsiElementFactory.createTypeElementFromText
 import org.jetbrains.plugins.scala.lang.psi.impl.toplevel.synthetic.ScSyntheticClass
 import org.jetbrains.plugins.scala.lang.psi.types._
-import org.jetbrains.plugins.scala.lang.psi.types.api.{Any, ExtractClass}
+import org.jetbrains.plugins.scala.lang.psi.types.api.Any
+import org.jetbrains.plugins.scala.lang.psi.types.api.designator.ScDesignatorType
 import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.ScSubstitutor
 import org.jetbrains.plugins.scala.lang.psi.types.result._
 import org.jetbrains.plugins.scala.lang.resolve.ScalaResolveResult
@@ -134,14 +135,14 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
 
     typeArgList.typeArgs.find {
       case e: ScFunctionalTypeElement if isKindProjectorFunctionSyntax(e) => true
-      case e if isKindProjectorInlineSyntax(e) => true
-      case _: ScWildcardTypeElementImpl => true
-      case _ => false
+      case e if isKindProjectorInlineSyntax(e)                            => true
+      case _: ScWildcardTypeElementImpl                                   => true
+      case _                                                              => false
     } match {
       case Some(fun) if isKindProjectorFunctionSyntax(fun) => kindProjectorFunctionSyntax(fun)
-      case Some(e) if isKindProjectorInlineSyntax(e) => kindProjectorInlineSyntax(e)
-      case Some(_) => existentialType
-      case _ => null
+      case Some(e) if isKindProjectorInlineSyntax(e)       => kindProjectorInlineSyntax(e)
+      case Some(_)                                         => existentialType
+      case _                                               => null
     }
   }
 
@@ -190,13 +191,14 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
     val typeArgs = typeArgList.typeArgs.map(_.`type`().getOrAny)
 
     tr match {
-      case Right(ExtractClass(cls)) if andOrOrTypeDesignator.contains(cls.getQualifiedName) =>
-        val des = cls.getQualifiedName
+      case Right(ScDesignatorType(alias: ScTypeAlias)) if
+        alias.topLevelQualifier.contains("scala") && andOrOrTypeDesignator.contains(alias.name) =>
+        val name = alias.name
         if (typeArgs.size != 2) Right(Any)
         else {
           val tpe =
-            if (des == "scala.&") ScAndType(typeArgs(0), typeArgs(1))
-            else                  ScOrType(typeArgs(0), typeArgs(1))
+            if (name == "&") ScAndType(typeArgs(0), typeArgs(1))
+            else             ScOrType(typeArgs(0), typeArgs(1))
 
           Right(tpe)
         }
@@ -257,6 +259,6 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
 }
 
 object ScParameterizedTypeElementImpl {
-  private[ScParameterizedTypeElementImpl] val inlineSyntaxIds       = Set("?", "+?", "-?", "*", "+*", "-*")
-  private[ScParameterizedTypeElementImpl] val andOrOrTypeDesignator = Set("scala.&", "scala.|")
+  private[ScParameterizedTypeElementImpl] val inlineSyntaxIds       = Set("?", "+?", "-?", "*", "+*", "-*", "+_", "-_")
+  private[ScParameterizedTypeElementImpl] val andOrOrTypeDesignator = Set("&", "|")
 }

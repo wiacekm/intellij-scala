@@ -83,6 +83,16 @@ object ScalaPsiUtil {
     else c.name
   }
 
+  def typeParamsString(
+    params:               Seq[ScTypeParam],
+    withLowerUpperBounds: Boolean = true,
+    withViewBounds:       Boolean = true,
+    withContextBounds:    Boolean = true
+  ): String =
+    if (params.isEmpty) ""
+    else
+      params.map(typeParamString(_, withLowerUpperBounds, withViewBounds, withContextBounds)).mkString("[", ", ", "]")
+
   def typeParamString(
     param:                ScTypeParam,
     withLowerUpperBounds: Boolean = true,

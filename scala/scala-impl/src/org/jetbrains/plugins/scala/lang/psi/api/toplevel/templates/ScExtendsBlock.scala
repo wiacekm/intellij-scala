@@ -58,7 +58,7 @@ trait ScExtendsBlock extends ScalaPsiElement {
 
   def isUnderCaseClass: Boolean
 
-  def isEnumDefinition: Boolean
+  def isDesugaredEnumClass: Boolean
 
   def addEarlyDefinitions(): ScEarlyDefinitions
 

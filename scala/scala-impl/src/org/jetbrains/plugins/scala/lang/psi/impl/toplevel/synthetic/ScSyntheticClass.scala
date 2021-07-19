@@ -17,10 +17,10 @@ import com.intellij.util.IncorrectOperationException
 import javax.swing.Icon
 import org.jetbrains.plugins.scala.extensions._
 import org.jetbrains.plugins.scala.lang.psi.adapters.PsiClassAdapter
-import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFun
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScFun, ScTypeAlias}
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScTypeParam
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScObject
-import org.jetbrains.plugins.scala.lang.psi.api.{ScalaFile, ScalaPsiElement}
+import org.jetbrains.plugins.scala.lang.psi.api.ScalaPsiElement
 import org.jetbrains.plugins.scala.lang.psi.types._
 import org.jetbrains.plugins.scala.lang.psi.types.api._
 import org.jetbrains.plugins.scala.lang.psi.types.nonvalue.Parameter
@@ -212,6 +212,7 @@ class SyntheticClasses(project: Project) extends PsiElementFinder {
       numeric.clear()
       integer.clear()
       syntheticObjects.clear()
+      syntheticAliases.clear()
     }
 
     stringPlusMethod = null
@@ -228,10 +229,11 @@ class SyntheticClasses(project: Project) extends PsiElementFinder {
 
   var stringPlusMethod: ScType => ScSyntheticFunction = _
 
-  var all             : mutable.Map[String, ScSyntheticClass] = new mutable.HashMap[String, ScSyntheticClass]
-  var numeric         : mutable.Set[ScSyntheticClass]         = new mutable.HashSet[ScSyntheticClass]
-  var integer         : mutable.Set[ScSyntheticClass]         = new mutable.HashSet[ScSyntheticClass]
-  val syntheticObjects: mutable.Map[String, ScObject]         = new mutable.HashMap[String, ScObject]
+  var all              = mutable.HashMap.empty[String, ScSyntheticClass]
+  var numeric          = mutable.HashSet.empty[ScSyntheticClass]
+  var integer          = mutable.HashSet.empty[ScSyntheticClass]
+  val syntheticObjects = mutable.HashMap.empty[String, ScObject]
+  val syntheticAliases = mutable.HashSet.empty[ScTypeAlias]
 
   var file : PsiFile = _
 
@@ -315,10 +317,8 @@ class SyntheticClasses(project: Project) extends PsiElementFinder {
 
     //register synthetic objects
     def registerObject(fileText: String): Unit = {
-      val dummyFile = PsiFileFactory.getInstance(project).
-        createFileFromText("dummy." + ScalaFileType.INSTANCE.getDefaultExtension,
-          ScalaFileType.INSTANCE, fileText).asInstanceOf[ScalaFile]
-      val obj = dummyFile.typeDefinitions.head.asInstanceOf[ScObject]
+      val dummyFile = ScalaPsiElementFactory.createScalaFileFromText(fileText)
+      val obj       = dummyFile.typeDefinitions.head.asInstanceOf[ScObject]
       syntheticObjects.put(obj.qualifiedName, obj)
     }
 
@@ -448,6 +448,29 @@ object Unit
 """
     )
 
+    def registerAlias(text: String): Unit = {
+      val file  = ScalaPsiElementFactory.createScalaFileFromText(text, language = Option(Scala3Language.INSTANCE))
+      val alias = file.members.head.asInstanceOf[ScTypeAlias]
+      syntheticAliases += alias
+    }
+
+    registerAlias(
+      """
+        |package scala
+        |
+        |type &[A, B]
+        |""".stripMargin
+    )
+
+    registerAlias(
+      """
+        |package scala
+        |
+        |type |[A, B]
+        |""".stripMargin
+    )
+
+
     classesInitialized = true
   }
 
@@ -476,7 +499,6 @@ object Unit
 
   def registerIntegerClass(clazz : ScSyntheticClass): ScSyntheticClass = {integer += clazz; clazz}
   def registerNumericClass(clazz : ScSyntheticClass): ScSyntheticClass = {numeric += clazz; clazz}
-
 
   def getAll: Iterable[ScSyntheticClass] = all.values
 

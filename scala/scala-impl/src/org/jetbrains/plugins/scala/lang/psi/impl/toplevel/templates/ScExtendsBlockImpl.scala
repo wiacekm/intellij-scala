@@ -90,7 +90,7 @@ class ScExtendsBlockImpl private(stub: ScExtendsBlockStub, node: ASTNode)
       buffer ++= scalaSerializable
     }
 
-    if (isEnumDefinition) {
+    if (isDesugaredEnumClass) {
       buffer ++= scalaReflectEnum
     }
 
@@ -163,7 +163,7 @@ class ScExtendsBlockImpl private(stub: ScExtendsBlockStub, node: ASTNode)
       buffer ++= scalaSerializableClass
     }
 
-    if (isEnumDefinition) buffer ++= scalaReflectEnumClass
+    if (isDesugaredEnumClass) buffer ++= scalaReflectEnumClass
 
     buffer.find {
       case _: ScSyntheticClass => true
@@ -227,9 +227,9 @@ class ScExtendsBlockImpl private(stub: ScExtendsBlockStub, node: ASTNode)
     case _                                 => false
   }
 
-  override def isEnumDefinition: Boolean = getParentByStub match {
-    case _: ScEnum => true
-    case _         => false
+  override def isDesugaredEnumClass: Boolean = getParentByStub match {
+    case ScEnum.DesugaredEnumClass(_) => true
+    case _                            => false
   }
 
   private def templateBodies = templateBody.toSeq

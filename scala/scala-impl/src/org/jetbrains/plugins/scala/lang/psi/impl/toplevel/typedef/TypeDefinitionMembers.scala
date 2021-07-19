@@ -6,7 +6,6 @@ package toplevel
 package typedef
 
 import java.{util => ju}
-
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.psi._
 import com.intellij.psi.impl.light.LightMethod
@@ -81,17 +80,26 @@ object TypeDefinitionMembers {
     }
   }
 
-  def getStableSignatures(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): StableNodes.Map = {
+  def getStableSignatures(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): StableNodes.Map = {
     ScalaPsiManager.instance(tp.projectContext).getStableSignatures(tp, compoundTypeThisType)
   }
 
-  def getTypes(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): TypeNodes.Map = {
+  def getTypes(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): TypeNodes.Map = {
     ScalaPsiManager.instance(tp.projectContext).getTypes(tp, compoundTypeThisType)
   }
 
-  def getSignatures(tp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): TermNodes.Map = {
+  def getSignatures(tp: ScCompoundType, compoundTypeThisType: Option[ScType]): TermNodes.Map = {
     ScalaPsiManager.instance(tp.projectContext).getSignatures(tp, compoundTypeThisType)
   }
+
+  def getStableSignatures(tp: ScAndType): StableNodes.Map =
+    ScalaPsiManager.instance(tp.projectContext).getStableSignatures(tp)
+
+  def getTypes(tp: ScAndType): TypeNodes.Map =
+    ScalaPsiManager.instance(tp.projectContext).getTypes(tp)
+
+  def getSignatures(tp: ScAndType): TermNodes.Map =
+    ScalaPsiManager.instance(tp.projectContext).getSignatures(tp)
 
   def getSelfTypeSignatures(clazz: PsiClass): TermNodes.Map = {
     @annotation.tailrec
@@ -204,13 +212,29 @@ object TypeDefinitionMembers {
     true
   }
 
-  def processDeclarations(comp: ScCompoundOrAndType,
+  def processDeclarations(comp: ScCompoundType,
                           processor: PsiScopeProcessor,
                           state: ResolveState,
                           lastParent: PsiElement,
                           place: PsiElement): Boolean = {
 
     if (!privateProcessDeclarations(processor, state, place, AllSignatures(comp, state.compoundOrThisType)))
+      return false
+
+    if (!processSyntheticAnyRefAndAny(processor, state, lastParent, place))
+      return false
+
+    true
+  }
+
+  def processDeclarations(
+    tpe:        ScAndType,
+    processor:  PsiScopeProcessor,
+    state:      ResolveState,
+    lastParent: PsiElement,
+    place:      PsiElement
+  ): Boolean = {
+    if (!privateProcessDeclarations(processor, state, place, AllSignatures(tpe)))
       return false
 
     if (!processSyntheticAnyRefAndAny(processor, state, lastParent, place))
@@ -235,8 +259,10 @@ object TypeDefinitionMembers {
     def apply(c: PsiClass): SignatureMapsProvider =
       new ClassSignatures(c, withSupers = true)
 
-    def apply(comp: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]): SignatureMapsProvider =
+    def apply(comp: ScCompoundType, compoundTypeThisType: Option[ScType]): SignatureMapsProvider =
       new CompoundTypeSignatures(comp, compoundTypeThisType)
+
+    def apply(tpe: ScAndType): SignatureMapsProvider = new AndTypeSignatures(tpe)
 
     private class ClassSignatures(c: PsiClass, withSupers: Boolean) extends SignatureMapsProvider {
       override def allSignatures: MixinNodes.Map[TermSignature] = getSignatures(c, withSupers)
@@ -249,7 +275,7 @@ object TypeDefinitionMembers {
     }
 
 
-    private class CompoundTypeSignatures(ct: ScCompoundOrAndType, compoundTypeThisType: Option[ScType]) extends SignatureMapsProvider {
+    private class CompoundTypeSignatures(ct: ScCompoundType, compoundTypeThisType: Option[ScType]) extends SignatureMapsProvider {
       override def allSignatures: MixinNodes.Map[TermSignature] = getSignatures(ct, compoundTypeThisType)
 
       override def stable: MixinNodes.Map[TermSignature] = getStableSignatures(ct, compoundTypeThisType)
@@ -257,6 +283,13 @@ object TypeDefinitionMembers {
       override def types: MixinNodes.Map[TypeSignature] = getTypes(ct, compoundTypeThisType)
 
       override def fromCompanion: MixinNodes.Map[TermSignature] = MixinNodes.emptyMap[TermSignature]
+    }
+
+    private class AndTypeSignatures(tpe: ScAndType) extends SignatureMapsProvider {
+      override def allSignatures: MixinNodes.Map[TermSignature] = getSignatures(tpe)
+      override def stable: MixinNodes.Map[TermSignature]        = getStableSignatures(tpe)
+      override def types: MixinNodes.Map[TypeSignature]         = getTypes(tpe)
+      override def fromCompanion: MixinNodes.Map[TermSignature] = MixinNodes.emptyMap
     }
   }
 
@@ -277,11 +310,13 @@ object TypeDefinitionMembers {
     val processOnlyStable   = shouldProcessOnlyStable(processor)
     val isImplicitProcessor = BaseProcessor.isImplicitProcessor(processor)
 
-    def process(signature: Signature): Boolean = {
+    def process(signature: Signature): Boolean =
       if (signature.namedElement.isValid) {
-        processor.execute(signature.namedElement, state.withSubstitutor(signature.substitutor.followed(subst)))
+        val withSubst                 = state.withSubstitutor(signature.substitutor.followed(subst))
+        val intersectedReturnType     = signature.asOptionOf[TermSignature].flatMap(_.intersectedReturnType)
+        val withIntersectedReturnType = intersectedReturnType.fold(withSubst)(withSubst.withIntersectedReturnType)
+        processor.execute(signature.namedElement, withIntersectedReturnType)
       } else true
-    }
 
 
     def processTermNode(node: MixinNodes.Node[TermSignature]): Boolean = {

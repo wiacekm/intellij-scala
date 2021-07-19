@@ -7,7 +7,7 @@ import com.intellij.psi._
 import com.intellij.psi.scope._
 import org.jetbrains.plugins.scala.lang.psi.api.ScalaPsiElement
 import org.jetbrains.plugins.scala.lang.psi.api.base.ScStableCodeReference
-import org.jetbrains.plugins.scala.lang.psi.api.statements.ScDeclaredElementsHolder
+import org.jetbrains.plugins.scala.lang.psi.api.statements.{ScDeclaredElementsHolder, ScExtension}
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.{ScClass, ScObject, ScTrait, ScTypeDefinition}
 import org.jetbrains.plugins.scala.lang.resolve.ResolveTargets
@@ -50,6 +50,7 @@ trait ScDeclarationSequenceHolder extends ScalaPsiElement {
           }
           true
         case named: ScNamedElement => processor.execute(named, state)
+        case ext: ScExtension      => ext.extensionMethods.forall(processor.execute(_, state))
         case holder: ScDeclaredElementsHolder =>
           val elements: Seq[PsiNamedElement] = holder.declaredElements
           var i = 0
