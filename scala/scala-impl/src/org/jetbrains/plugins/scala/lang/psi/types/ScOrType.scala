@@ -9,6 +9,8 @@ final case class ScOrType private(lhs: ScType, rhs: ScType) extends ScalaType wi
   override def visitType(visitor: ScalaTypeVisitor): Unit = visitor.visitOrType(this)
 
   override implicit def projectContext: ProjectContext = lhs.projectContext
+
+  def join: ScType = ???
 }
 
 object ScOrType {
