@@ -173,7 +173,8 @@ object DependencyGroups {
   )
 
   val dfa: Seq[ModuleID] = Seq(
-    scalaTest
+    scalaTest,
+    "com.lihaoyi" %% "fastparse" % "2.3.0",
   )
 
   val traceLogger: Seq[ModuleID] = Seq(
