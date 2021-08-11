@@ -1,5 +1,6 @@
 package org.jetbrains.plugins.scala.traceLogViewer.viewer
 
+import org.jetbrains.plugins.scala.traceLogViewer.viewer.TraceLogFunctionCellRenderer._
 import org.jetbrains.plugins.scala.traceLogger.protocol.StackTraceEntry
 
 import java.awt.event.MouseEvent
@@ -7,15 +8,6 @@ import java.awt.{Color, Graphics}
 import javax.swing.border.EmptyBorder
 
 class TraceLogFunctionCellRenderer extends TraceLogBaseCellRenderer {
-  val colors = Seq(
-    Color.GREEN.darker().darker(),
-    Color.RED.darker().darker(),
-    Color.YELLOW.darker().darker(),
-    Color.CYAN.darker().darker(),
-  )
-
-  val indentSize = 4
-
   override def setup(): Unit = {
     // if the method names is like org$jetbrains$blub$SomeObj$$method
     // transform it to SomeObj$$method
@@ -32,31 +24,46 @@ class TraceLogFunctionCellRenderer extends TraceLogBaseCellRenderer {
   override def getToolTipText(event: MouseEvent): String = {
     val builder = new StringBuilder
 
-    def addEntry(entry: StackTraceEntry): Unit = {
+    var maxLines = 50
+
+    def addEntry(entry: StackTraceEntry, bold: Boolean = false): Unit = {
+      if (maxLines <= 0) {
+        return
+      }
+      maxLines -= 1
+
+      if (bold) {
+        builder.append("<b>")
+      }
       builder.append(entry.className)
       builder.append('.')
       builder.append(entry.method)
       builder.append(" (line ")
       builder.append(entry.line)
-      builder.append(")\n")
+      builder.append(")")
+      if (bold) {
+        builder.append("</b>")
+      }
+      builder.append("<br />\n")
     }
 
+    builder.append("<html>")
+
     for (entry <- currentNode.newStackTrace) {
-      builder.append("<b>")
-      addEntry(entry)
-      builder.append("</b><br />")
+      addEntry(entry, bold = true)
     }
 
     for (entry <- currentNode.parentStackTrace) {
       addEntry(entry)
-      builder.append('\n')
     }
+
+    builder.append("</html>")
 
     builder.toString()
   }
 
-  override def paint(g: Graphics): Unit = {
-    super.paint(g)
+  override def paintComponent(g: Graphics): Unit = {
+    super.paintComponent(g)
 
     def color(depth: Int) = colors(depth % colors.size)
 
@@ -78,4 +85,15 @@ class TraceLogFunctionCellRenderer extends TraceLogBaseCellRenderer {
 
     g.setColor(saveColor)
   }
+}
+
+object TraceLogFunctionCellRenderer {
+  val colors = Seq(
+    Color.GREEN.darker().darker(),
+    Color.RED.darker().darker(),
+    Color.YELLOW.darker().darker(),
+    Color.CYAN.darker().darker(),
+  )
+
+  val indentSize = 4
 }
