@@ -36,7 +36,7 @@ class TraceLogModel(root: Node) extends ListTreeTableModelOnColumns(root, Column
 object TraceLogModel {
   def createFromLines(lines: Iterator[String]): TraceLogModel = {
     val roots = NodesReader.readLines(lines)
-    val root = new EnclosingNode("Log Roots", Seq.empty, Nil, roots)
+    val root = new EnclosingNode("Log Roots", Seq.empty, Nil, enclosingNodeUnitResult, roots)
     new TraceLogModel(root)
   }
 
@@ -98,9 +98,13 @@ object TraceLogModel {
     override def children(): util.Enumeration[? <: TreeNode] = util.Collections.emptyEnumeration()
   }
 
+  type EnclosingNodeResult = Either[String, Data]
+  val enclosingNodeUnitResult = Right("()")
+
   final class EnclosingNode(_msg: String,
                             _values: Seq[(String, Data)],
                             _stackTrace: List[StackTraceEntry],
+                            val result: EnclosingNodeResult,
                             val childrenSeq: ArraySeq[Node])
     extends Node(_msg, _values, _stackTrace)
   {
@@ -131,7 +135,11 @@ object TraceLogModel {
     override protected def createEnclosingNode(start: TraceLoggerEntry.Start,
                                                inners: ArraySeq[Node],
                                                result: EnclosingResult,
-                                               stackTrace: List[StackTraceEntry]): Node =
-      new EnclosingNode(start.msg, start.values, stackTrace, inners)
+                                               stackTrace: List[StackTraceEntry]): Node = {
+      val res = result
+        .left.map(_.fold("<node was not closed>")(_.exception))
+        .map(_.result)
+      new EnclosingNode(start.msg, start.values, stackTrace, res, inners)
+    }
   }
 }
