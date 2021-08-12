@@ -2,7 +2,7 @@ package org.jetbrains.plugins.scala.dfa.testlang.dfa
 
 import com.intellij.codeInspection.dataFlow.lang.{DfaAnchor, DfaListener, UnsatisfiedConditionProblem}
 import com.intellij.codeInspection.dataFlow.memory.DfaMemoryState
-import com.intellij.codeInspection.dataFlow.types.DfTypes
+import com.intellij.codeInspection.dataFlow.types.{DfIntConstantType, DfIntegralType, DfLongConstantType, DfTypes}
 import com.intellij.codeInspection.dataFlow.value.DfaValue
 import com.intellij.util.ThreeState
 
@@ -22,18 +22,19 @@ class TestLangDfaListener extends DfaListener {
 
   private def recordExpressionValue(anchor: TestLangAnchor, state: DfaMemoryState, value: DfaValue): Unit = {
     var newValue = state.getDfType(value) match {
-      case DfTypes.TRUE => ConstantValue.True
-      case DfTypes.FALSE => ConstantValue.False
-      case DfTypes.NULL => ConstantValue.Null
-      case x if x == DfTypes.intValue(0) || x == DfTypes.longValue(0) => ConstantValue.Zero
-      case _ => ConstantValue.Unknown
+      case DfTypes.BOOLEAN => BooleanValue(true)
+      case DfTypes.FALSE => BooleanValue(false)
+      case DfTypes.NULL => NullValue
+      case values: DfIntegralType if values.getRange.isCardinalityBigger(1) => UnknownValue
+      case values: DfIntegralType => IntegerValue(values.getRange.max)
+      case _ => UnknownValue
     }
 
     constantConditions.get(anchor) match {
       case Some(oldValue) =>
-        if (oldValue == ConstantValue.Unknown) return
+        if (oldValue == UnknownValue) return
         if (oldValue != newValue) {
-          newValue = ConstantValue.Unknown
+          newValue = UnknownValue
         }
       case None => ()
     }
