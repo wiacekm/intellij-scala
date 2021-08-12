@@ -1,124 +1,128 @@
 package org.jetbrains.plugins.scala.dfa.testlang.dfa
 
-import com.intellij.codeInspection.dataFlow.lang.{DfaAnchor, UnsatisfiedConditionProblem}
+import com.intellij.codeInspection.dataFlow.lang.DfaAnchor
 import com.intellij.lang.{ASTNode, Language}
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.{Key, TextRange}
 import com.intellij.psi.scope.PsiScopeProcessor
 import com.intellij.psi.search.{GlobalSearchScope, SearchScope}
-import com.intellij.psi.{PsiElement, PsiElementVisitor, PsiFile, PsiManager, PsiReference, ResolveState}
+import com.intellij.psi._
+import org.jetbrains.plugins.scala.dfa.testlang.Ast
 import org.jetbrains.plugins.scala.dfa.testlang.Ast.Expression
 
 import javax.swing.Icon
 
-sealed trait TestLangAnchor extends DfaAnchor
-case class TestLangExpressionAnchor(expression: Expression) extends TestLangAnchor
+object anchors {
 
-object DummyAnchor extends PsiElement {
+  sealed trait TestLangAnchor extends DfaAnchor
+  case class TestLangExpressionAnchor(expression: Expression) extends TestLangAnchor
 
-  override def getResolveScope: GlobalSearchScope = ???
+  implicit class TestLangNodePsiWrapper(node: Ast.Node) extends PsiElement {
 
-  override def putCopyableUserData[T](key: Key[T], value: T): Unit = ???
+    override def getResolveScope: GlobalSearchScope = ???
 
-  override def isPhysical: Boolean = ???
+    override def putCopyableUserData[T](key: Key[T], value: T): Unit = ???
 
-  override def getContext: PsiElement = ???
+    override def isPhysical: Boolean = ???
 
-  override def getUseScope: SearchScope = ???
+    override def getContext: PsiElement = ???
 
-  override def isEquivalentTo(another: PsiElement): Boolean = ???
+    override def getUseScope: SearchScope = ???
 
-  override def processDeclarations(processor: PsiScopeProcessor, state: ResolveState, lastParent: PsiElement, place: PsiElement): Boolean = ???
+    override def isEquivalentTo(another: PsiElement): Boolean = ???
 
-  override def getNode: ASTNode = ???
+    override def processDeclarations(processor: PsiScopeProcessor, state: ResolveState, lastParent: PsiElement, place: PsiElement): Boolean = ???
 
-  override def getProject: Project = ???
+    override def getNode: ASTNode = ???
 
-  override def getLanguage: Language = ???
+    override def getProject: Project = ???
 
-  override def getManager: PsiManager = ???
+    override def getLanguage: Language = ???
 
-  override def getChildren: Array[PsiElement] = ???
+    override def getManager: PsiManager = ???
 
-  override def getParent: PsiElement = ???
+    override def getChildren: Array[PsiElement] = ???
 
-  override def getFirstChild: PsiElement = ???
+    override def getParent: PsiElement = ???
 
-  override def getLastChild: PsiElement = ???
+    override def getFirstChild: PsiElement = ???
 
-  override def getNextSibling: PsiElement = ???
+    override def getLastChild: PsiElement = ???
 
-  override def getPrevSibling: PsiElement = ???
+    override def getNextSibling: PsiElement = ???
 
-  override def getContainingFile: PsiFile = ???
+    override def getPrevSibling: PsiElement = ???
 
-  override def getTextRange: TextRange = ???
+    override def getContainingFile: PsiFile = ???
 
-  override def getStartOffsetInParent: Int = ???
+    override def getTextRange: TextRange = ???
 
-  override def getTextLength: Int = ???
+    override def getStartOffsetInParent: Int = ???
 
-  override def findElementAt(offset: Int): PsiElement = ???
+    override def getTextLength: Int = ???
 
-  override def findReferenceAt(offset: Int): PsiReference = ???
+    override def findElementAt(offset: Int): PsiElement = ???
 
-  override def getTextOffset: Int = ???
+    override def findReferenceAt(offset: Int): PsiReference = ???
 
-  override def getText: String = ???
+    override def getTextOffset: Int = ???
 
-  override def textToCharArray(): Array[Char] = ???
+    override def getText: String = ???
 
-  override def getNavigationElement: PsiElement = ???
+    override def textToCharArray(): Array[Char] = ???
 
-  override def getOriginalElement: PsiElement = ???
+    override def getNavigationElement: PsiElement = ???
 
-  override def textMatches(text: CharSequence): Boolean = ???
+    override def getOriginalElement: PsiElement = ???
 
-  override def textMatches(element: PsiElement): Boolean = ???
+    override def textMatches(text: CharSequence): Boolean = ???
 
-  override def textContains(c: Char): Boolean = ???
+    override def textMatches(element: PsiElement): Boolean = ???
 
-  override def accept(visitor: PsiElementVisitor): Unit = ???
+    override def textContains(c: Char): Boolean = ???
 
-  override def acceptChildren(visitor: PsiElementVisitor): Unit = ???
+    override def accept(visitor: PsiElementVisitor): Unit = ???
 
-  override def copy(): PsiElement = ???
+    override def acceptChildren(visitor: PsiElementVisitor): Unit = ???
 
-  override def add(element: PsiElement): PsiElement = ???
+    override def copy(): PsiElement = ???
 
-  override def addBefore(element: PsiElement, anchor: PsiElement): PsiElement = ???
+    override def add(element: PsiElement): PsiElement = ???
 
-  override def addAfter(element: PsiElement, anchor: PsiElement): PsiElement = ???
+    override def addBefore(element: PsiElement, anchor: PsiElement): PsiElement = ???
 
-  override def checkAdd(element: PsiElement): Unit = ???
+    override def addAfter(element: PsiElement, anchor: PsiElement): PsiElement = ???
 
-  override def addRange(first: PsiElement, last: PsiElement): PsiElement = ???
+    override def checkAdd(element: PsiElement): Unit = ???
 
-  override def addRangeBefore(first: PsiElement, last: PsiElement, anchor: PsiElement): PsiElement = ???
+    override def addRange(first: PsiElement, last: PsiElement): PsiElement = ???
 
-  override def addRangeAfter(first: PsiElement, last: PsiElement, anchor: PsiElement): PsiElement = ???
+    override def addRangeBefore(first: PsiElement, last: PsiElement, anchor: PsiElement): PsiElement = ???
 
-  override def delete(): Unit = ???
+    override def addRangeAfter(first: PsiElement, last: PsiElement, anchor: PsiElement): PsiElement = ???
 
-  override def checkDelete(): Unit = ???
+    override def delete(): Unit = ???
 
-  override def deleteChildRange(first: PsiElement, last: PsiElement): Unit = ???
+    override def checkDelete(): Unit = ???
 
-  override def replace(newElement: PsiElement): PsiElement = ???
+    override def deleteChildRange(first: PsiElement, last: PsiElement): Unit = ???
 
-  override def isValid: Boolean = ???
+    override def replace(newElement: PsiElement): PsiElement = ???
 
-  override def isWritable: Boolean = ???
+    override def isValid: Boolean = ???
 
-  override def getReference: PsiReference = ???
+    override def isWritable: Boolean = ???
 
-  override def getReferences: Array[PsiReference] = ???
+    override def getReference: PsiReference = ???
 
-  override def getCopyableUserData[T](key: Key[T]): T = ???
+    override def getReferences: Array[PsiReference] = ???
 
-  override def putUserData[T](key: Key[T], value: T): Unit = ???
+    override def getCopyableUserData[T](key: Key[T]): T = ???
 
-  override def getUserData[T](key: Key[T]): T = ???
+    override def putUserData[T](key: Key[T], value: T): Unit = ???
 
-  override def getIcon(flags: Int): Icon = ???
+    override def getUserData[T](key: Key[T]): T = ???
+
+    override def getIcon(flags: Int): Icon = ???
+  }
 }

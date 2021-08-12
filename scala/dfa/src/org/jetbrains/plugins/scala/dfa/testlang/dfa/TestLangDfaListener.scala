@@ -2,9 +2,10 @@ package org.jetbrains.plugins.scala.dfa.testlang.dfa
 
 import com.intellij.codeInspection.dataFlow.lang.{DfaAnchor, DfaListener, UnsatisfiedConditionProblem}
 import com.intellij.codeInspection.dataFlow.memory.DfaMemoryState
-import com.intellij.codeInspection.dataFlow.types.{DfIntConstantType, DfIntegralType, DfLongConstantType, DfTypes}
+import com.intellij.codeInspection.dataFlow.types.{DfIntegralType, DfTypes}
 import com.intellij.codeInspection.dataFlow.value.DfaValue
 import com.intellij.util.ThreeState
+import org.jetbrains.plugins.scala.dfa.testlang.dfa.anchors.TestLangAnchor
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
