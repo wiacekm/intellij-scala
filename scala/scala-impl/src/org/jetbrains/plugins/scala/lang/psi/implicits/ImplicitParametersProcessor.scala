@@ -37,7 +37,7 @@ private[implicits] final class ImplicitParametersProcessor(override val getPlace
   }
 
   override def candidatesS: Set[ScalaResolveResult] =
-    super.candidatesS.filterNot(c => lowerInFileWithoutType(c) || isContextAncestor(c))
+    super.candidatesS.filterNot(c => lowerInFileWithoutType(c))
 
   private def isAccessible(namedElement: PsiNamedElement): Boolean =
     isPredefPriority || ImplicitProcessor.isAccessible(namedElement, getPlace)
@@ -58,14 +58,6 @@ private[implicits] final class ImplicitParametersProcessor(override val getPlace
           if pd.typeElement.isEmpty =>
         lowerInFile(pattern)
       case _ => false
-    }
-  }
-
-  private def isContextAncestor(c: ScalaResolveResult): Boolean = {
-    val nameContext = ScalaPsiUtil.nameContext(c.element)
-    nameContext match {
-      case _: ScCaseClause => !getPlace.betterMonadicForEnabled && !getPlace.isInScala3Module
-      case _               => PsiTreeUtil.isContextAncestor(nameContext, getPlace, false)
     }
   }
 }

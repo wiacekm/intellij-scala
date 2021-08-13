@@ -5,7 +5,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
 import org.jetbrains.plugins.scala.AssertionMatchers
-import org.jetbrains.plugins.scala.base.ScalaLightCodeInsightFixtureTestAdapter
+import org.jetbrains.plugins.scala.base.{ScalaLightCodeInsightFixtureTestAdapter, SharedTestProjectToken}
 import org.jetbrains.plugins.scala.base.ScalaLightCodeInsightFixtureTestAdapter.findCaretOffsets
 import org.jetbrains.plugins.scala.editor.DocumentExt
 import org.jetbrains.plugins.scala.extensions.{StringExt, inWriteCommandAction}
@@ -15,6 +15,9 @@ abstract class ScalaHighlightingUsagesTestBase extends ScalaLightCodeInsightFixt
   val |< = startMarker
   val >| = endMarker
   val | = startMarker + endMarker
+
+  protected override def sharedProjectToken: SharedTestProjectToken =
+    SharedTestProjectToken(classOf[ScalaHighlightingUsagesTestBase])
 
   def doTest(fileText: String): Unit = {
     val (fileTextWithoutMarkers, allRanges) = extractMarker(fileText.withNormalizedSeparator)
