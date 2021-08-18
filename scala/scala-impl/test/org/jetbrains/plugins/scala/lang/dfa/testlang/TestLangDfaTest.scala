@@ -16,8 +16,14 @@ class TestLangDfaTest extends ScalaLightCodeInsightFixtureTestAdapter {
   def test_simple(): Unit = {
     val code =
       """
-        |3
-        |2 + 3
+        |x = 3
+        |y = 2
+        |if (x < 5) {
+        |y = 15
+        |} else {
+        |y = 12
+        |}
+        |y + 8
         |""".stripMargin
     val program = LangParser.parse(code)
 
@@ -32,8 +38,6 @@ class TestLangDfaTest extends ScalaLightCodeInsightFixtureTestAdapter {
       state => new DfaInstructionState(flow.getInstruction(0), state)
     }
     if (interpreter.interpret(instructionStates.asJava) == RunnerResult.OK) {
-      println(listener)
-      println("constant conditions:")
       println(listener.constantConditions)
     }
   }

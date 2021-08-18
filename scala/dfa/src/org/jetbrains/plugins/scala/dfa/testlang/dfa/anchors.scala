@@ -15,7 +15,7 @@ import javax.swing.Icon
 object anchors {
 
   sealed trait TestLangAnchor extends DfaAnchor
-  case class TestLangExpressionAnchor(expression: Expression) extends TestLangAnchor
+  case class TestLangExpressionAnchor(astNode: Ast.Node) extends TestLangAnchor
 
   implicit class TestLangNodePsiWrapper(node: Ast.Node) extends PsiElement {
 

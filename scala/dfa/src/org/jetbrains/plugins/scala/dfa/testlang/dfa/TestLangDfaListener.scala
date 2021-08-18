@@ -23,7 +23,7 @@ class TestLangDfaListener extends DfaListener {
 
   private def recordExpressionValue(anchor: TestLangAnchor, state: DfaMemoryState, value: DfaValue): Unit = {
     var newValue = state.getDfType(value) match {
-      case DfTypes.BOOLEAN => BooleanValue(true)
+      case DfTypes.TRUE => BooleanValue(true)
       case DfTypes.FALSE => BooleanValue(false)
       case DfTypes.NULL => NullValue
       case values: DfIntegralType if values.getRange.isCardinalityBigger(1) => UnknownValue

@@ -1,6 +1,8 @@
 package org.jetbrains.plugins.scala.dfa.testlang
 
+import com.intellij.psi.PsiElement
 import fastparse.Parsed
+import org.jetbrains.plugins.scala.dfa.testlang.dfa.anchors.TestLangNodePsiWrapper
 
 import scala.annotation.tailrec
 
@@ -24,6 +26,14 @@ object Ast {
 
   sealed abstract class Statement(val startIndex: Int, val endIndex: Int) extends Node
   type Block = Seq[Statement]
+  // a very ugly fix but this is just a PoC anyway and it's more complicated to do it better
+  implicit class BlockAstNodeWrapper(val block: Block) extends Node {
+    override def toString: String = s"Block: $block"
+  }
+  implicit class BlockPsiWrapper(val block: Block) extends TestLangNodePsiWrapper(block) {
+    override def toString: String = s"Block: $block"
+  }
+
   case class ExpressionStmt(expr: Expression)(_index: Int, _endIndex: Int) extends Statement(_index, _endIndex)
   case class IfStmt(condition: Expression, success: Block, fail: Option[Block])(_index: Int, _endIndex: Int) extends Statement(_index, _endIndex)
   case class WhileStmt(condition: Expression, body: Block)(_index: Int, _endIndex: Int) extends Statement(_index, _endIndex)
@@ -252,7 +262,7 @@ object LangPrinter {
       case Operator(op, left, right) => s"(${p(left)} $op ${p(right)})"
       case PropertyAccess(base, property) => s"${p(base)}.$property"
       case Union(elements) => elements.map(p).mkString("[", " | ", "]")
-      case UndefinedLiteral => "undefined"
+      case UndefinedLiteral | _ => "undefined"
     }
   }
 
