@@ -155,12 +155,14 @@ object LangParser {
     "/" -> 6,
     "+" -> 5,
     "-" -> 5,
-    ">" -> 1,
-    "<" -> 1,
-    ">=" -> 1,
-    "<=" -> 1,
-    "==" -> 1,
-    "!=" -> 1,
+    ">" -> 2,
+    "<" -> 2,
+    ">=" -> 2,
+    "<=" -> 2,
+    "==" -> 2,
+    "!=" -> 2,
+    "&&" -> 1,
+    "||" -> 1,
     debugIsOperator -> 0,
   )
 
@@ -187,7 +189,7 @@ object LangParser {
   }
 
   def expression[_: P]: P[Ast.Expression] = P(
-    (innerExpression ~~ (Pass ~ ("+" | "-" | "*" | "/" | "==" | "!=" | "<" | ">" | "<=" | ">=" | debugIsOperator).! ~ innerExpression).repX).map {
+    (innerExpression ~~ (Pass ~ ("+" | "-" | "*" | "/" | "==" | "!=" | "<" | ">" | "<=" | ">=" | "||" | "&&" | debugIsOperator).! ~ innerExpression).repX).map {
       case (first, tail) =>
         val (result, Seq()) = precedenceClimbUp(0, first, tail)
         result

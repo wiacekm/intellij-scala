@@ -15,7 +15,7 @@ class Interpreter(val initContext: IterableOnce[(String, Value)]) {
     case Ast.Script(main) => execBlock(main)
     case stmt: Ast.Statement => execStmt(stmt)
     case expr: Ast.Expression => execExpr(expr)
-    case _: Ast.Property => fail("Cannot interpret property!")
+    case _ => fail("Cannot interpret property!")
   }
 
   def execBlock(block: Ast.Block): Option[Value] =
@@ -65,21 +65,32 @@ class Interpreter(val initContext: IterableOnce[(String, Value)]) {
     case Ast.Operator(op, left, right) =>
       def lhs = execExpr(left)
       def rhs = execExpr(right)
-      def iLhs: Int = execExpr(left).cast[Num].num
-      def iRhs: Int = execExpr(right).cast[Num].num
-      op match {
-        case "+" => Num(iLhs + iRhs)
-        case "-" => Num(iLhs - iRhs)
-        case "*" => Num(iLhs * iRhs)
-        case "/" => Num(iLhs / iRhs)
-        case "==" => Bool(lhs == rhs)
-        case "!=" => Bool(lhs != rhs)
-        case ">" => Bool(iLhs > iRhs)
-        case "<" => Bool(iLhs < iRhs)
-        case ">=" => Bool(iLhs >= iRhs)
-        case "<=" => Bool(iLhs <= iRhs)
-        case _ => fail(s"Unknown operator $op")
+
+      if (op == "||" || op == "&&") {
+        def iLhs: Boolean = execExpr(left).cast[Bool].bool
+        def iRhs: Boolean = execExpr(right).cast[Bool].bool
+        op match {
+          case "||" => Bool(iLhs || iRhs)
+          case "&&" => Bool(iLhs && iRhs)
+        }
+      } else {
+        def iLhs: Int = execExpr(left).cast[Num].num
+        def iRhs: Int = execExpr(right).cast[Num].num
+        op match {
+          case "+" => Num(iLhs + iRhs)
+          case "-" => Num(iLhs - iRhs)
+          case "*" => Num(iLhs * iRhs)
+          case "/" => Num(iLhs / iRhs)
+          case "==" => Bool(lhs == rhs)
+          case "!=" => Bool(lhs != rhs)
+          case ">" => Bool(iLhs > iRhs)
+          case "<" => Bool(iLhs < iRhs)
+          case ">=" => Bool(iLhs >= iRhs)
+          case "<=" => Bool(iLhs <= iRhs)
+          case _ => fail(s"Unknown operator $op")
+        }
       }
+
     case Ast.PropertyAccess(base, property) =>
       execExpr(base).cast[Obj]
         .properties.getOrElse(property, fail(s"Couldn't find property $property"))
