@@ -10,6 +10,7 @@ import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.pom.java.LanguageLevel
 import com.intellij.testFramework.IdeaTestUtil
 import org.jetbrains.plugins.scala.extensions.inWriteAction
+import org.jetbrains.plugins.scala.util.UnloadAwareDisposable
 import org.junit.Assert
 
 import java.io.File
@@ -70,7 +71,7 @@ object SmartJDKLoader {
     Option(jdkTable.findJdk(jdkName)).getOrElse {
       val pathOption = SmartJDKLoader.discoverJDK(jdkVersion).map(_.getAbsolutePath)
       Assert.assertTrue(s"Couldn't find $jdkVersion", pathOption.isDefined)
-      VfsRootAccess.allowRootAccess(pathOption.get): @nowarn("cat=deprecation")
+      VfsRootAccess.allowRootAccess(UnloadAwareDisposable.scalaPluginDisposable, pathOption.get): @nowarn("cat=deprecation")
       val jdk = JavaSdk.getInstance.createJdk(jdkName, pathOption.get, false)
       inWriteAction { jdkTable.addJdk(jdk) }
       jdk

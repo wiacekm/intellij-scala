@@ -3,11 +3,11 @@ package base
 package libraryLoaders
 
 import java.io.File
-
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.PsiTestUtil
 import org.jetbrains.plugins.scala.project.ModuleExt
+import org.jetbrains.plugins.scala.util.UnloadAwareDisposable
 
 import scala.annotation.nowarn
 
@@ -27,7 +27,7 @@ trait ThirdPartyLibraryLoader extends LibraryLoader {
     val path = this.path
     val file = new File(path).getCanonicalFile
     assert(file.exists(), s"library root for $name does not exist at $file")
-    VfsRootAccess.allowRootAccess(path): @nowarn("cat=deprecation")
+    VfsRootAccess.allowRootAccess(UnloadAwareDisposable.forProject(module.getProject), path): @nowarn("cat=deprecation")
     PsiTestUtil.addLibrary(module, name, file.getParent, file.getName)
   }
 
