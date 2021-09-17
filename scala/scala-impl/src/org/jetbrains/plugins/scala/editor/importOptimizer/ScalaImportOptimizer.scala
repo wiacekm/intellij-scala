@@ -362,12 +362,9 @@ object ScalaImportOptimizer {
       }
     }
 
-    private def getImportTextData(importInfo: ImportInfo,
-                                  isUnicodeArrow: Boolean,
-                                  spacesInImports: Boolean,
-                                  scalaFeatures: ScalaFeatures,
-                                  nameOrdering: Option[Ordering[String]]): ImportTextData = {
+    private def getImportTextData(importInfo: ImportInfo, options: ImportTextGenerationOptions): ImportTextData = {
       import importInfo._
+      import options._
 
       val groupStrings = new ArrayBuffer[String]
 
@@ -376,12 +373,21 @@ object ScalaImportOptimizer {
         else groupStrings ++= names
       }
 
+      val scala3SyntaxAllowed =
+        scalaFeatures.isScala3 || !forceScala2SyntaxInSource3
+      val useScala3RenamingImports =
+        scalaFeatures.`Scala 3 renaming imports` && scala3SyntaxAllowed
+      val useScala3Wildcards =
+        scalaFeatures.`Scala 3 wildcard imports` && scala3SyntaxAllowed
+      val useScala3WildcardsInSelectors =
+        scalaFeatures.`Scala 3 wildcard imports in selector` && scala3SyntaxAllowed
+
       val arrow =
-        if (scalaFeatures.`Scala 3 renaming imports`) "as"
+        if (useScala3RenamingImports) "as"
         else if (isUnicodeArrow) ScalaTypedHandler.unicodeCaseArrow
         else "=>"
       val wildcard =
-        if (scalaFeatures.`Scala 3 wildcard imports`) "*"
+        if (useScala3Wildcards) "*"
         else "_"
       addGroup(singleNames)
       addGroup(renames.map { case (from, to) => s"$from $arrow $to" })
@@ -392,10 +398,10 @@ object ScalaImportOptimizer {
       val root = if (rootUsed) s"${_root_prefix}." else ""
       val hasAlias = renames.nonEmpty || hiddenNames.nonEmpty
       val postfix =
-        if (groupStrings.length > 1 || (hasAlias && !scalaFeatures.`Scala 3 renaming imports`)) {
+        if (groupStrings.length > 1 || (hasAlias && !useScala3RenamingImports)) {
           // this is needed to fix the wildcard-import bug in 2.13.6 with -Xsource:3
           def fixWildcardInSelector(s: String): String =
-            if (s == wildcard && !scalaFeatures.`Scala 3 wildcard imports in selector`) "_"
+            if (s == wildcard && !useScala3WildcardsInSelectors) "_"
             else s
           groupStrings
             .map(fixWildcardInSelector)
@@ -406,24 +412,15 @@ object ScalaImportOptimizer {
       ImportTextData(prefix, dotOrNot, postfix)
     }
 
-    def getImportText(importInfo: ImportInfo,
-                      isUnicodeArrow: Boolean,
-                      spacesInImports: Boolean,
-                      scalaFeatures: ScalaFeatures,
-                      nameOrdering: Option[Ordering[String]]): String =
-      getImportTextData(importInfo, isUnicodeArrow, spacesInImports, scalaFeatures, nameOrdering).fullText
+    def getImportText(importInfo: ImportInfo, options: ImportTextGenerationOptions): String =
+      getImportTextData(importInfo, options).fullText
 
     def getScalastyleSortableText(importInfo: ImportInfo): String =
-      getImportTextData(importInfo, isUnicodeArrow = false, spacesInImports = false, scalaFeatures = ScalaFeatures.default, nameOrdering = None)
+      getImportTextData(importInfo, ImportTextGenerationOptions.default)
         .forScalastyleSorting
 
-    def getImportText(importInfo: ImportInfo, settings: OptimizeImportSettings): String = {
-      val ordering =
-        if (settings.scalastyleOrder) Some(ScalastyleSettings.nameOrdering)
-        else if (settings.sortImports) Some(Ordering.String)
-        else None
-      getImportText(importInfo, settings.isUnicodeArrow, settings.spacesInImports, settings.scalaFeatures, ordering)
-    }
+    def getImportText(importInfo: ImportInfo, settings: OptimizeImportSettings): String =
+      getImportText(importInfo, ImportTextGenerationOptions.from(settings))
   }
 
   def optimizedImportInfos(rangeInfo: RangeInfo, settings: OptimizeImportSettings): Seq[ImportInfo] = {
