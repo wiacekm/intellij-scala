@@ -100,9 +100,9 @@ class BspProjectResolver extends ExternalSystemProjectResolver[BspExecutionSetti
             val resources = data.resources.map(_.getItems.asScala).getOrElse {List.empty[ResourcesItem]}
             val scalacOptions = data.scalacOptions.map(_.getItems.asScala).getOrElse {List.empty[ScalacOptionsItem]}
             val javacOptions = data.javacOptions.map(_.getItems.asScala).getOrElse {List.empty[JavacOptionsItem]}
-
+            val pythonOptions = data.pythonOptions.map(_.getItems.asScala).getOrElse {List.empty[JavacOptionsItem]}
             val descriptions = calculateModuleDescriptions(
-              targets, scalacOptions.toSeq, javacOptions.toSeq, sources.toSeq, resources.toSeq, depSources.toSeq
+              targets, scalacOptions.toSeq, javacOptions.toSeq, pythonOptions.toSeq, sources.toSeq, resources.toSeq, depSources.toSeq
             )
             projectNode(workspace, descriptions, rootExclusions(workspace))
           }
@@ -298,10 +298,11 @@ object BspProjectResolver {
 
     val scalacOptions = fetchScalacOptions(targets, parentId)
     val javacOptions = fetchJavacOptions(targets, parentId)
+    val pythonOptions = fetchPythonOptions(targets, parentId)
 
     CompletableFuture
       .allOf(sources, depSources, resources, scalacOptions, javacOptions)
-      .thenApply(_ => TargetData(sources.get, depSources.get, resources.get, scalacOptions.get, javacOptions.get))
+      .thenApply(_ => TargetData(sources.get, depSources.get, resources.get, scalacOptions.get, javacOptions.get, pythonOptions.get))
   }
 
   //noinspection ReferencePassedToNls
@@ -345,6 +346,30 @@ object BspProjectResolver {
     } else {
       val emptyResult = new JavacOptionsResult(Collections.emptyList())
       CompletableFuture.completedFuture[Try[JavacOptionsResult]](Success(emptyResult))
+    }
+  }
+
+  //noinspection ReferencePassedToNls
+  private def fetchPythonOptions(targets: List[BuildTarget], parentId: EventId)(implicit bsp: BspServer, reporter: BuildReporter) = {
+    val javaTargetIds = targets
+      .filter(_.getLanguageIds.contains("python"))
+      .map(_.getId).asJava
+
+    if (! javaTargetIds.isEmpty) {
+      //TODO: handle correctly when added in bsp4j
+//      val eventId = BuildMessages.randomEventId
+//      val message = "python options"
+//      reporter.startTask(eventId, Some(parentId), message)
+//
+//      val javacOptionsParams = new JavacOptionsParams(javaTargetIds)
+//      bsp.buildTargetJavacOptions(javacOptionsParams)
+//        .catchBspErrors
+//        .reportFinished(reporter, eventId, message, BspBundle.message("bsp.resolver.request.failed.buildtarget.javacoptions"))
+      val emptyResult = new PythonOptionsResult(Collections.emptyList())
+      CompletableFuture.completedFuture[Try[PythonOptionsResult]](Success(emptyResult))
+    } else {
+      val emptyResult = new PythonOptionsResult(Collections.emptyList())
+      CompletableFuture.completedFuture[Try[PythonOptionsResult]](Success(emptyResult))
     }
   }
 

@@ -166,7 +166,7 @@ object BspCommunication {
   private def prepareSession(base: File, config: BspServerConfig)(implicit reporter: BuildReporter): Either[BspError, Builder] = {
 
     // TODO supported languages should be extendable
-    val supportedLanguages = List("scala","java")
+    val supportedLanguages = List("scala","java", "python")
     val capabilities = BspCapabilities(supportedLanguages)
     val compilerOutputDir = BspUtil.compilerOutputDirFromConfig(base)
       .getOrElse(new File(base, "out"))

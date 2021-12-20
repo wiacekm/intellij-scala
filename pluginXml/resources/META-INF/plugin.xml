@@ -47,6 +47,8 @@
     <depends optional="true" config-file="scala-devkit-integration.xml">DevKit</depends>
     <depends optional="true" config-file="scala-ml-completion-integration.xml">com.intellij.completion.ml.ranking</depends>
     <depends optional="true" config-file="packagesearch.xml">com.jetbrains.packagesearch.intellij-plugin</depends>
+    <depends optional="true" config-file="python-core.xml">PythonCore</depends>
+    <depends optional="true" config-file="python-modules.xml">com.intellij.modules.python</depends>
 
     <xi:include href="scala-plugin-common.xml" xpointer="xpointer(/idea-plugin/*)"/>
     <xi:include href="SBT.xml" xpointer="xpointer(/idea-plugin/*)"/>

@@ -1,11 +1,9 @@
 package org.jetbrains.bsp.project.importing
 
 import java.io.File
-
 import ch.epfl.scala.bsp4j._
 import com.intellij.pom.java.LanguageLevel
-import org.jetbrains.bsp.data.JdkData
-import org.jetbrains.bsp.data.{SbtBuildModuleDataBsp, ScalaSdkData}
+import org.jetbrains.bsp.data.{JdkData, PythonSdkData, SbtBuildModuleDataBsp, ScalaSdkData}
 
 import scala.util.Try
 
@@ -13,6 +11,8 @@ import scala.util.Try
 object BspResolverDescriptors {
 
   type TestClassId = String
+
+  type PythonOptionsResult = JavacOptionsResult // TODO: add PythonOptionsResult in bsp4j
 
   case class ModuleDescription(data: ModuleDescriptionData,
                                moduleKindData: ModuleKind)
@@ -51,11 +51,15 @@ object BspResolverDescriptors {
                        sbtData: SbtBuildModuleDataBsp
                       ) extends ModuleKind
 
+  case class PythonModule(pythonSdkData: PythonSdkData
+                      ) extends ModuleKind
+
   case class TargetData(sources: Try[SourcesResult],
                         dependencySources: Try[DependencySourcesResult],
                         resources: Try[ResourcesResult],
                         scalacOptions: Try[ScalacOptionsResult], // TODO should be optional
-                        javacOptions: Try[JavacOptionsResult]
+                        javacOptions: Try[JavacOptionsResult],
+                        pythonOptions: Try[PythonOptionsResult]
                        )
 
   case class SourceDirectory(directory: File, generated: Boolean, packagePrefix: Option[String])

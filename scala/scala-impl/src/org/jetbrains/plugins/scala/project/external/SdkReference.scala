@@ -22,6 +22,7 @@ final case class JdkByName @PropertyMapping(Array("name")) (name: String) extend
 final case class JdkByHome @PropertyMapping(Array("home")) (home: File) extends SdkReference
 final case class JdkByVersion @PropertyMapping(Array("version")) (version: String) extends SdkReference
 final case class AndroidJdk @PropertyMapping(Array("version")) (version: String) extends SdkReference
+final case class PythonSdk @PropertyMapping(Array("version", "venv")) (version: String, venv: String) extends SdkReference
 
 object SdkUtils {
 

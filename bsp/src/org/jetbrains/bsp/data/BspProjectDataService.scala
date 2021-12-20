@@ -1,20 +1,31 @@
 package org.jetbrains.bsp.data
 
+import com.intellij.openapi.application.{ApplicationManager, ModalityState}
 import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.project.ProjectData
 import com.intellij.openapi.externalSystem.service.project.IdeModifiableModelsProvider
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.projectRoots.impl.{ProjectJdkImpl, SdkConfigurationUtil}
 import com.intellij.openapi.projectRoots.{JavaSdk, ProjectJdkTable, Sdk}
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.roots.impl.LanguageLevelProjectExtensionImpl
+import com.intellij.openapi.roots.ui.configuration.projectRoot.ProjectSdksModel
+import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vcs.roots.VcsRootDetector
 import com.intellij.openapi.vcs.{ProjectLevelVcsManager, VcsDirectoryMapping, VcsRoot}
 import com.intellij.openapi.vfs.{LocalFileSystem, VfsUtilCore}
 import com.intellij.pom.java.LanguageLevel
 import org.jetbrains.plugins.scala.project.ProjectContext
-import org.jetbrains.plugins.scala.project.external.{JdkByHome, ScalaAbstractProjectDataService, SdkReference, SdkUtils}
+import org.jetbrains.plugins.scala.project.external.{JdkByHome, PythonSdk, ScalaAbstractProjectDataService, SdkReference, SdkUtils}
+import com.jetbrains.python.configuration.PyConfigurableInterpreterList
+import com.jetbrains.python.facet.PythonSdkTableListener
+import com.jetbrains.python.sdk.configuration.PyProjectVirtualEnvConfiguration
+import com.jetbrains.python.sdk.{PySdkExtKt, PythonSdkType, PythonSdkUtil}
+import org.jetbrains.plugins.scala.extensions.ObjectExt
+import org.jetbrains.plugins.scala.extensions
 
 import java.io.File
+import java.nio.file.Path
 import java.util
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
@@ -28,8 +39,10 @@ class BspProjectDataService extends ScalaAbstractProjectDataService[BspProjectDa
     modelsProvider: IdeModifiableModelsProvider
   ): Unit = {
     toImport.forEach { node =>
-      configureJdk(Option(node.getData.jdk))(project)
+      val jdk = Option(node.getData.jdk)
+      configureJdk(jdk)(project)
       configureVcs(node.getData.vcsRootsCandidates.asScala, project)
+      configurePythonVenv(Option(node.getData.pythonVenv.asInstanceOf[PythonSdk]))(project)
     }
   }
 
@@ -97,5 +110,50 @@ class BspProjectDataService extends ScalaAbstractProjectDataService[BspProjectDa
     }
 
     SdkUtils.findProjectSdk(sdkReference).orElse(createFromHome)
+  }
+
+  private def configurePythonVenv(pythonSdk: Option[PythonSdk])(implicit project: ProjectContext): Unit = executeProjectChangeAction {
+    val basePath = project.getBasePath
+//    val projectSdks =
+//      Option(PyConfigurableInterpreterList.getInstance(project)).map(_.getAllPythonSdks())
+    val projectSdkModel = new ProjectSdksModel()
+    projectSdkModel.reset(project)
+    val projectSdks = projectSdkModel.getSdks.filter(_.getSdkType.is[PythonSdkType]).toList
+
+    val pyProjectVirtualEnv = PyProjectVirtualEnvConfiguration.INSTANCE
+    val allPythonSdks = PySdkExtKt.findAllPythonSdks(Path.of(project.getBasePath))
+    pythonSdk
+      .foreach {
+        case PythonSdk(version, venv) =>
+          if (checkIfProjectVenvAdded(projectSdks, venvPath(basePath, venv))) {
+            // TODO: notify that env is added
+          }
+          else {
+            getExistingVenv(allPythonSdks.asScala.toList, venvPath(basePath, venv))
+              .map { case sdk: ProjectJdkImpl =>
+                sdk.setName(s"${sdk.getVersionString} (${project.getName})")
+                SdkConfigurationUtil.addSdk(sdk)
+              }
+              .orElse {
+                val sdk = pyProjectVirtualEnv.findPreferredVirtualEnvBaseSdk(projectSdks.asJava)
+                extensions.invokeLater{
+                  pyProjectVirtualEnv.createVirtualEnvSynchronously(sdk, projectSdks.asJava, s"${project.getBasePath}/$venv", null, project, null, new UserDataHolderBase(), false, false)
+                }
+                None
+              }
+          }
+      }
+  }
+
+  private def checkIfProjectVenvAdded(sdks: List[Sdk], venvPath: String): Boolean = {
+    sdks.exists(_.getHomePath == venvPath)
+  }
+
+  private def getExistingVenv(sdks: List[Sdk], venvPath: String): Option[Sdk] = {
+    sdks.find(_.getHomePath == venvPath)
+  }
+
+  private def venvPath(basePath: String, venv: String): String = {
+    s"$basePath/$venv"
   }
 }

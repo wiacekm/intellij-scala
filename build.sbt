@@ -411,7 +411,10 @@ lazy val bsp =
     )
     .settings(
       libraryDependencies ++= DependencyGroups.bsp,
-      intellijPlugins += "JUnit".toPlugin,
+      intellijPlugins ++= Seq(
+        "JUnit",
+        "PythonCore"
+      ).map(_.toPlugin)
 //      intellijMainJars := Seq.empty // why was this unset?
     )
 

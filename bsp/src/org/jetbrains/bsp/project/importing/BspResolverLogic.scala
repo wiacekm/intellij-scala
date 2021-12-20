@@ -1,7 +1,7 @@
 package org.jetbrains.bsp.project.importing
 
 import ch.epfl.scala.bsp4j._
-import com.google.gson.{Gson, JsonElement}
+import com.google.gson.{Gson, JsonElement, JsonObject}
 import com.intellij.openapi.externalSystem.model.project._
 import com.intellij.openapi.externalSystem.model.{DataNode, ProjectKeys}
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
@@ -10,13 +10,13 @@ import com.intellij.openapi.roots.DependencyScope
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.pom.java.LanguageLevel
 import org.jetbrains.bsp.BspUtil._
-import org.jetbrains.bsp.data._
+import org.jetbrains.bsp.data.{PythonSdkData, _}
 import org.jetbrains.bsp.project.BspSyntheticModuleType
 import org.jetbrains.bsp.project.importing.BspResolverDescriptors._
 import org.jetbrains.bsp.{BSP, BspBundle}
 import org.jetbrains.plugins.scala.extensions.ObjectExt
 import org.jetbrains.plugins.scala.project.Version
-import org.jetbrains.plugins.scala.project.external.{JdkByHome, JdkByVersion}
+import org.jetbrains.plugins.scala.project.external.{JdkByHome, JdkByVersion, PythonSdk}
 import org.jetbrains.sbt.project.data.{SbtModuleData, SbtModuleNode}
 import org.jetbrains.sbt.project.module.SbtModuleType
 
@@ -29,6 +29,9 @@ import scala.jdk.CollectionConverters._
 
 private[importing] object BspResolverLogic {
 
+  type PythonBuildTarget = JvmBuildTarget //TODO: create PythonBuildTarget in bsp4j
+  type PythonOptionsItem = JavacOptionsItem
+
   private def extractJdkData(data: JsonElement)(implicit gson: Gson): Option[JvmBuildTarget] =
     Option(gson.fromJson[JvmBuildTarget](data, classOf[JvmBuildTarget]))
 
@@ -37,6 +40,9 @@ private[importing] object BspResolverLogic {
 
   private def extractSbtData(data: JsonElement)(implicit gson: Gson): Option[SbtBuildTarget] =
     Option(gson.fromJson[SbtBuildTarget](data, classOf[SbtBuildTarget]))
+
+  private def extractPythonData(data: JsonElement)(implicit gson: Gson): Option[PythonBuildTarget] =
+    Option(gson.fromJson[PythonBuildTarget](data, classOf[PythonBuildTarget]))
 
   private[importing] def getJdkData(target: JvmBuildTarget): JdkData = {
     val javaHome = Option(target.getJavaHome).map(new URI(_))
@@ -70,9 +76,16 @@ private[importing] object BspResolverLogic {
     (jdkData, scalaSdkData, sbtBuildModuleData)
   }
 
+  private[importing] def getPythonData(target: PythonBuildTarget, pythonOptionsItem: Option[PythonOptionsItem]): PythonSdkData = {
+    val javaHome = Option(target.getJavaHome).map(new URI(_))
+
+    PythonSdkData(new URI(".venv/bin/python"), null)
+  }
+
   private[importing] def calculateModuleDescriptions(buildTargets: Seq[BuildTarget],
                                                      scalacOptionsItems: Seq[ScalacOptionsItem],
                                                      javacOptionsItems: Seq[JavacOptionsItem],
+                                                     pythonOptionsItems: Seq[PythonOptionsItem],
                                                      sourcesItems: Seq[SourcesItem],
                                                      resourcesItems: Seq[ResourcesItem],
                                                      dependencySourcesItems: Seq[DependencySourcesItem]): ProjectModules = {
@@ -80,6 +93,7 @@ private[importing] object BspResolverLogic {
     val idToTarget = buildTargets.map(t => (t.getId, t)).toMap
     val idToScalacOptions = scalacOptionsItems.map(item => (item.getTarget, item)).toMap
     val idToJavacOptions = javacOptionsItems.map(item => (item.getTarget, item)).toMap
+    val idToPythonOptions = pythonOptionsItems.map(item => (item.getTarget, item)).toMap
 
     val transitiveDepComputed: mutable.Map[BuildTarget, Set[BuildTarget]] = mutable.Map.empty
 
@@ -119,14 +133,26 @@ private[importing] object BspResolverLogic {
       val id = target.getId
       val scalacOptions = idToScalacOptions.get(id)
       val javacOptions = idToJavacOptions.get(id)
+      val pythonOptions = idToPythonOptions.get(id)
       val depSources = idToDepSources.getOrElse(id, Seq.empty)
       val sharedSourcesAndGenerated = (sharedSources.keys ++ sharedGeneratedSources.values.flatten).toSeq
       val sources = idToSources.getOrElse(id, Seq.empty).filterNot(sharedSourcesAndGenerated.contains)
       val resources = idToResources.getOrElse(id, Seq.empty).filterNot(sharedResources.contains)
       val dependencyOutputs = transitiveDependencyOutputs(target)
 
+
       implicit val gson: Gson = new Gson()
-      moduleDescriptionForTarget(target, scalacOptions, javacOptions, depSources, sources, resources, dependencyOutputs)
+      //TODO: hack to find out if python sources
+      if(sourcesItems.filter(_.getTarget.getUri == target.getId.getUri).exists(_.getSources.asScala.exists(_.getUri.endsWith(".py")))) {
+        target.setDataKind("python")
+        val newLanguageIds = target.getLanguageIds
+        newLanguageIds.add("python")
+        target.setLanguageIds(newLanguageIds)
+        val data = new JsonObject()
+        target.setData(data)
+      }
+
+      moduleDescriptionForTarget(target, scalacOptions, javacOptions, pythonOptions, depSources, sources, resources, dependencyOutputs)
     }
 
     val idToModule = (for {
@@ -256,11 +282,13 @@ private[importing] object BspResolverLogic {
   private[importing] def moduleDescriptionForTarget(target: BuildTarget,
                                                     scalacOptions: Option[ScalacOptionsItem],
                                                     javacOptions: Option[JavacOptionsItem],
+                                                    pythonOptions: Option[PythonOptionsItem], // TODO: change to PythonOptionsItem
                                                     dependencySourceDirs: Seq[File],
                                                     sourceDirs: Seq[SourceDirectory],
                                                     resourceDirs: Seq[SourceDirectory],
                                                     dependencyOutputs: Seq[File]
                                                   )(implicit gson: Gson): Option[ModuleDescription] = {
+
     val moduleBaseDir: Option[File] = Option(target.getBaseDirectory).map(_.toURI.toFile)
     val outputPath =
       scalacOptions.map(_.getClassDirectory.toURI.toFile)
@@ -294,6 +322,10 @@ private[importing] object BspResolverLogic {
           targetData.flatMap(extractSbtData)
             .map(target => getSbtData(target, scalacOptions))
             .map((SbtModule.apply _).tupled)
+        case "python" => // TODO: move to BuildTargetDataKind.SBT
+          targetData.flatMap(extractPythonData)
+            .map(target => getPythonData(target, pythonOptions))
+            .map(PythonModule.apply)
         case _ =>
           Some(UnspecifiedModule())
       }
@@ -597,8 +629,9 @@ private[importing] object BspResolverLogic {
 
     val bspProjectData = {
       val jdkReference = inferProjectJdk(modules)
+      val pythonReference = inferProjectPythonSdk(modules)
       val vcsRootsCandidates = projectModules.modules.flatMap(_.data.basePath).distinct
-      new DataNode[BspProjectData](BspProjectData.Key, BspProjectData(jdkReference, vcsRootsCandidates.asJava), projectNode)
+      new DataNode[BspProjectData](BspProjectData.Key, BspProjectData(jdkReference, vcsRootsCandidates.asJava, pythonReference), projectNode)
     }
 
     // effects
@@ -640,6 +673,10 @@ private[importing] object BspResolverLogic {
       Option(home).map(_.toFile).map(JdkByHome).orElse(Option(version).map(JdkByVersion))
     }
     jdkReference
+  }
+
+  private def inferProjectPythonSdk(modules: Set[DataNode[ModuleData]]) = {
+    Option(PythonSdk("PY3", ".venv/bin/python"))
   }
 
   private[importing] def moduleFilesDirectory(workspace: File) = new File(workspace, ".idea/modules")
@@ -901,6 +938,10 @@ private[importing] object BspResolverLogic {
         // TODO adding module nodes from sbt mixes the data models of the BSP and sbt external system support
         // so it's a bit of a hack that should be addressed. For now this allows supporting sbt file within BSP projects.
         moduleNode.addChild(new SbtModuleNode(SbtModuleData(moduleData.id, new URI(moduleData.id))).toDataNode)
+
+      case PythonModule(pythonSdkData) =>
+        val pythonSdkNode = new DataNode[PythonSdkData](PythonSdkData.Key, pythonSdkData, moduleNode)
+        moduleNode.addChild(pythonSdkNode)
 
       case JvmModule(JdkData(javaHome, javaVersion)) =>
         // FIXME set jdk from home or version

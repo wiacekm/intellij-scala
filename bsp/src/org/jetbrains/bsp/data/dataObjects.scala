@@ -37,15 +37,16 @@ object BspEntityData {
 }
 
 @SerialVersionUID(1)
-case class BspProjectData @PropertyMapping(Array("jdk", "vcsRootsCandidates")) private (
+case class BspProjectData @PropertyMapping(Array("jdk", "vcsRootsCandidates", "pythonVenv")) private (
   @Nullable jdk: SdkReference,
-  @NotNull vcsRootsCandidates: util.List[File]
+  @NotNull vcsRootsCandidates: util.List[File],
+  @Nullable pythonVenv: SdkReference // TODO: how do we want to tranfser this data? how it will be passesed for BSP
 ) extends BspEntityData
 
 object BspProjectData {
   val Key: Key[BspProjectData] = datakey(classOf[BspProjectData], weight = ProjectKeys.PROJECT.getProcessingWeight +  1)
-  def apply(sdk: Option[SdkReference], vcsRootsCandidates: util.List[File]): BspProjectData =
-    BspProjectData(sdk.orNull, vcsRootsCandidates)
+  def apply(sdk: Option[SdkReference], vcsRootsCandidates: util.List[File], pythonSdk: Option[SdkReference]): BspProjectData =
+    BspProjectData(sdk.orNull, vcsRootsCandidates, pythonSdk.orNull) // TODO: remove hardcode
 }
 
 
@@ -66,6 +67,19 @@ case class ScalaSdkData @PropertyMapping(Array("scalaOrganization", "scalaVersio
 object ScalaSdkData {
   val Key: Key[ScalaSdkData] = datakey(classOf[ScalaSdkData], weight = ProjectKeys.LIBRARY_DEPENDENCY.getProcessingWeight + 10)
   val LibraryName: String = "scala-sdk"
+}
+
+@SerialVersionUID(4)
+case class PythonSdkData @PropertyMapping(Array("pythonVersion", "venvPath"))(
+  @Nullable venv: URI,
+  @Nullable pythonVersion: String
+) extends BspEntityData
+
+
+object PythonSdkData {
+  // TODO: should it be key or something else
+  val Key: Key[PythonSdkData] = datakey(classOf[PythonSdkData], weight = ProjectKeys.LIBRARY_DEPENDENCY.getProcessingWeight + 10)
+  val LibraryName: String = "python-sdk"
 }
 
 case class BspMetadataError(msg: String)
