@@ -1,6 +1,5 @@
 package org.jetbrains.bsp.data
 
-import com.intellij.openapi.application.{ApplicationManager, ModalityState}
 import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.project.ProjectData
 import com.intellij.openapi.externalSystem.service.project.IdeModifiableModelsProvider
@@ -17,10 +16,8 @@ import com.intellij.openapi.vfs.{LocalFileSystem, VfsUtilCore}
 import com.intellij.pom.java.LanguageLevel
 import org.jetbrains.plugins.scala.project.ProjectContext
 import org.jetbrains.plugins.scala.project.external.{JdkByHome, PythonSdk, ScalaAbstractProjectDataService, SdkReference, SdkUtils}
-import com.jetbrains.python.configuration.PyConfigurableInterpreterList
-import com.jetbrains.python.facet.PythonSdkTableListener
 import com.jetbrains.python.sdk.configuration.PyProjectVirtualEnvConfiguration
-import com.jetbrains.python.sdk.{PySdkExtKt, PythonSdkType, PythonSdkUtil}
+import com.jetbrains.python.sdk.{PySdkExtKt, PythonSdkType}
 import org.jetbrains.plugins.scala.extensions.ObjectExt
 import org.jetbrains.plugins.scala.extensions
 

@@ -30,7 +30,8 @@ import scala.jdk.CollectionConverters._
 private[importing] object BspResolverLogic {
 
   type PythonBuildTarget = JvmBuildTarget //TODO: create PythonBuildTarget in bsp4j
-  type PythonOptionsItem = JavacOptionsItem
+  type PythonOptionsItem = JavacOptionsItem //TODO: create PythonOptionsItem in bsp4j
+  private val PYTHON: String = "python" // TODO: move to BuildTargetDataKind.SBT
 
   private def extractJdkData(data: JsonElement)(implicit gson: Gson): Option[JvmBuildTarget] =
     Option(gson.fromJson[JvmBuildTarget](data, classOf[JvmBuildTarget]))
@@ -144,7 +145,7 @@ private[importing] object BspResolverLogic {
       implicit val gson: Gson = new Gson()
       //TODO: hack to find out if python sources
       if(sourcesItems.filter(_.getTarget.getUri == target.getId.getUri).exists(_.getSources.asScala.exists(_.getUri.endsWith(".py")))) {
-        target.setDataKind("python")
+        target.setDataKind(PYTHON)
         val newLanguageIds = target.getLanguageIds
         newLanguageIds.add("python")
         target.setLanguageIds(newLanguageIds)
@@ -322,7 +323,7 @@ private[importing] object BspResolverLogic {
           targetData.flatMap(extractSbtData)
             .map(target => getSbtData(target, scalacOptions))
             .map((SbtModule.apply _).tupled)
-        case "python" => // TODO: move to BuildTargetDataKind.SBT
+        case PYTHON =>
           targetData.flatMap(extractPythonData)
             .map(target => getPythonData(target, pythonOptions))
             .map(PythonModule.apply)
